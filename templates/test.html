@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>نظام اختبار الروبوت</title>
+    <style>
+        body {
+            font-family: system-ui, Segoe UI, Tahoma, Arial;
+            margin: 20px;
+            background: #0b1220;
+            color: #e8eefc
+        }
+
+        .row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap
+        }
+
+        .card {
+            background: #111b33;
+            border: 1px solid #22325f;
+            border-radius: 14px;
+            padding: 16px;
+            min-width: 280px;
+            flex: 1
+        }
+
+        h2 {
+            margin: 0 0 12px 0;
+            font-size: 18px
+        }
+
+        button {
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid #2b3d72;
+            background: #1a2a55;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.2s
+        }
+
+        button:hover {
+            filter: brightness(1.2);
+            transform: translateY(-1px)
+        }
+
+        button:active {
+            transform: translateY(1px)
+        }
+
+        .danger {
+            background: #7a1f2a;
+            border-color: #a53a45
+        }
+
+        .ok {
+            background: #1d5a3b;
+            border-color: #2e7b54
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            align-items: center
+        }
+
+        .center {
+            text-align: center
+        }
+
+        .pad button {
+            width: 100%;
+            height: 50px;
+            font-weight: bold
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 15px 0
+        }
+
+        .label {
+            opacity: .7;
+            font-size: 13px;
+            margin-bottom: 5px
+        }
+
+        .big {
+            font-size: 28px;
+            font-weight: 700
+        }
+
+        code {
+            background: #0a1020;
+            padding: 2px 6px;
+            border-radius: 6px
+        }
+
+        .muted {
+            opacity: .6;
+            font-size: 13px
+        }
+
+        .log {
+            height: 160px;
+            overflow: auto;
+            background: #0a1020;
+            border: 1px solid #22325f;
+            border-radius: 12px;
+            padding: 10px;
+            font-family: ui-monospace, Consolas;
+            font-size: 12px;
+            color: #aab
+        }
+
+        .flex-center {
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+    </style>
+</head>
+
+<body>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+        <div>
+            <h1 style="margin:0;">لوحة اختبار النظام 🛠️</h1>
+            <p class="muted" style="margin:5px 0 0 0;">
+                تحكم كامل في العتاد. يرجى توخي الحذر عند استخدام الرجوع (Reverse).
+            </p>
+        </div>
+        <div>
+            <a href="/" style="color:#64b5f6; text-decoration:none">عودة للرئيسية 🏠</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Movement Control -->
+        <div class="card pad">
+            <h2>🎮 التحكم في الحركة</h2>
+            <div class="label">الأسهم: Up/Down/Left/Right — Space = Stop</div>
+
+            <div class="grid" style="margin-top:12px;">
+                <div></div>
+                <button onclick="move('forward')" class="ok">▲ أمام</button>
+                <div></div>
+
+                <button onclick="move('left')">◀ يسار 90°</button>
+                <button onclick="move('stop')" class="danger">■ توقف</button>
+                <button onclick="move('right')">يمين 90° ▶</button>
+
+                <div></div>
+                <button onclick="move('reverse')" class="danger">▼ خلف (Raw)</button>
+                <div></div>
+            </div>
+
+            <div style="margin-top:15px; padding-top:10px; border-top:1px solid #22325f">
+                <div class="flex-center">
+                    <span class="label">Timeout (ثانية):</span>
+                    <input id="timeout" type="number" value="10" min="1" max="60"
+                        style="width:60px; padding:8px; border-radius:8px; background:#0a1020; border:1px solid #2b3d72; color:white">
+                    <button onclick="move('return')" style="flex:1" title="Turn 180 then Forward">↩ عودة آمنة (Turn &
+                        Go)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Carousel Control -->
+        <div class="card">
+            <h2>💊 القرص الدوار (Carousel)</h2>
+            <div class="label">تحديد زاوية العلبة (0–180)</div>
+
+            <div style="padding:20px 0;">
+                <input id="carouselRange" type="range" min="0" max="180" value="0"
+                    oninput="updateCarouselVal(this.value)">
+                <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+                    <span class="label">0°</span>
+                    <span class="big" id="carouselVal" style="color:#64b5f6">0°</span>
+                    <span class="label">180°</span>
+                </div>
+                <button onclick="setCarousel()" style="width:100%">تطبيق الزاوية</button>
+
+                <div style="margin-top:15px; display:flex; gap:10px">
+                    <button onclick="setCarouselAngle(0)" style="flex:1">0° (البداية)</button>
+                    <button onclick="setCarouselAngle(100)" style="flex:1">100° (تحميل)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gate Control -->
+        <div class="card">
+            <h2>🚪 بوابات الصناديق</h2>
+            <div class="label">اختبار فتح/غلق البوابات</div>
+
+            <div style="margin-top:15px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <button onclick="setGate(1, 90)" class="ok">1 فتح</button>
+                <button onclick="setGate(1, 0)">1 إغلاق</button>
+
+                <button onclick="setGate(2, 90)" class="ok">2 فتح</button>
+                <button onclick="setGate(2, 0)">2 إغلاق</button>
+            </div>
+
+            <p class="muted" style="margin-top:15px; text-align:center">
+                * تأكد من وجود العلبة تحت الصندوق قبل الفتح لتجنب تناثر الدواء.
+            </p>
+        </div>
+
+        <!-- Sensor & Logs -->
+        <div class="card">
+            <h2>📡 قراءات الحساسات</h2>
+            <div class="flex-center" style="justify-content:space-between">
+                <div>
+                    <div class="label">المسافة (Ultrasonic)</div>
+                    <div class="big" id="distance">--</div>
+                </div>
+                <button onclick="refreshStatus()">تحديث</button>
+            </div>
+
+            <div style="margin-top:20px" class="label">سجل العمليات (Logs)</div>
+            <div class="log" id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        const logBox = document.getElementById('log');
+        const distEl = document.getElementById('distance');
+        const timeoutEl = document.getElementById('timeout');
+
+        function log(msg) {
+            const t = new Date().toLocaleTimeString('en-US', { hour12: false });
+            logBox.innerHTML = `<div><span style="color:#5c6bc0">[${t}]</span> ${msg}</div>` + logBox.innerHTML;
+        }
+
+        function updateCarouselVal(val) {
+            document.getElementById('carouselVal').textContent = val + '°';
+        }
+
+        function setCarouselAngle(val) {
+            document.getElementById('carouselRange').value = val;
+            updateCarouselVal(val);
+            setCarousel();
+        }
+
+        async function move(direction) {
+            const timeout = parseInt(timeoutEl.value || "10", 10);
+            log(`⏳ جاري إرسال: ${direction.toUpperCase()}...`);
+
+            try {
+                const res = await fetch('/api/test/move', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ direction, timeout })
+                });
+                const data = await res.json();
+
+                if (data.ok) log(`✅ تم الأمر: ${direction} (Timeout: ${timeout}s)`);
+                else log(`❌ فشل: ${data.error || 'Unknown error'}`);
+
+            } catch (e) {
+                log(`❌ خطأ اتصال: ${e.message}`);
+            }
+        }
+
+        async function setCarousel() {
+            const angle = parseInt(document.getElementById('carouselRange').value, 10);
+            log(`⏳ تدوير القرص إلى ${angle}°...`);
+
+            try {
+                const res = await fetch('/api/test/servo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target: 'carousel', id: 0, angle })
+                });
+                const data = await res.json();
+                if (data.ok) log(`✅ تم تدوير القرص.`);
+                else log(`❌ فشل: ${data.message}`);
+            } catch (e) {
+                log(`❌ خطأ: ${e.message}`);
+            }
+        }
+
+        async function setGate(id, angle) {
+            const action = angle > 0 ? "فتح" : "إغلاق";
+            log(`⏳ ${action} بوابة ${id}...`);
+
+            try {
+                const res = await fetch('/api/test/servo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target: 'gate', id, angle })
+                });
+                const data = await res.json();
+                if (data.ok) log(`✅ تم ${action} البوابة ${id}.`);
+                else log(`❌ فشل: ${data.message}`);
+            } catch (e) {
+                log(`❌ خطأ: ${e.message}`);
+            }
+        }
+
+        async function refreshStatus() {
+            try {
+                const res = await fetch('/api/test/status');
+                const data = await res.json();
+                if (data && data.distance_cm != null) {
+                    distEl.textContent = data.distance_cm.toFixed(1) + " cm";
+                } else {
+                    distEl.textContent = "--";
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // Keyboard controls
+        window.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            if (e.target.tagName === 'INPUT') return; // Don't trigger when typing in inputs
+
+            if (e.code === 'ArrowUp') { e.preventDefault(); move('forward'); }
+            else if (e.code === 'ArrowDown') { e.preventDefault(); move('reverse'); }
+            else if (e.code === 'ArrowLeft') { e.preventDefault(); move('left'); }
+            else if (e.code === 'ArrowRight') { e.preventDefault(); move('right'); }
+            else if (e.code === 'Space') { e.preventDefault(); move('stop'); }
+        });
+
+        // Auto refresh distance every 1s
+        setInterval(refreshStatus, 1000);
+        refreshStatus();
+
+        log("مرحباً بك في لوحة الاختبار 👋");
+    </script>
+</body>
+
+</html>

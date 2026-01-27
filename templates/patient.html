@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MEDIBOT OS | متابعة الأدوية</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%236366f1' rx='20' width='100' height='100'/><text x='50' y='68' font-size='50' text-anchor='middle' fill='white'>💊</text></svg>">
+
+    <style>
+        :root {
+            --bg-body: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.6);
+            --bg-card-hover: rgba(30, 41, 59, 0.8);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --primary: #6366f1;
+            --secondary: #ec4899;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 12px;
+            --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f1f5f9;
+            --bg-card: rgba(255, 255, 255, 0.85);
+            --bg-card-hover: rgba(255, 255, 255, 0.95);
+            --border-color: rgba(0, 0, 0, 0.1);
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --primary: #4f46e5;
+            --secondary: #db2777;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --accent: #0891b2;
+        }
+
+        [data-theme="light"] .sidebar {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="light"] .medicine-card {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(241, 245, 249, 0.9));
+        }
+
+        [data-theme="light"] .schedule-time {
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        [data-theme="light"] .countdown-box {
+            background: linear-gradient(135deg, rgba(217, 119, 6, 0.1), rgba(220, 38, 38, 0.05));
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-body);
+            background-image:
+                radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 80px;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 0;
+            z-index: 10;
+        }
+
+        .brand-logo {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--success), var(--accent));
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 40px;
+            font-size: 1.5rem;
+        }
+
+        .nav-item {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            text-decoration: none;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: var(--bg-card);
+            color: var(--text-main);
+        }
+
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            left: -14px;
+            width: 4px;
+            height: 20px;
+            background: var(--success);
+            border-radius: 0 4px 4px 0;
+        }
+
+        .nav-item svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .nav-bottom {
+            margin-top: auto;
+        }
+
+        /* Main */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .header-title h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--text-main), var(--text-muted));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-title p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        /* Time Hero */
+        .time-hero {
+            background: var(--bg-card);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            text-align: center;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .time-hero h2 {
+            font-size: 4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--success), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .time-hero p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Cards Grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .medicine-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s;
+        }
+
+        .medicine-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .medicine-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+        }
+
+        .medicine-card.green::before {
+            background: linear-gradient(90deg, var(--success), var(--accent));
+        }
+
+        .medicine-card.purple::before {
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+
+        .green .card-icon {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .purple .card-icon {
+            background: rgba(236, 72, 153, 0.2);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .green .card-title {
+            color: var(--success);
+        }
+
+        .purple .card-title {
+            color: var(--secondary);
+        }
+
+        .schedule-time {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+        }
+
+        .schedule-time .time {
+            font-size: 3rem;
+            font-weight: 800;
+            font-family: monospace;
+        }
+
+        .schedule-time .label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .countdown-box {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(239, 68, 68, 0.1));
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .countdown-box h4 {
+            color: var(--warning);
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .countdown-box .countdown {
+            font-size: 2rem;
+            font-family: monospace;
+            font-weight: 700;
+            color: var(--warning);
+        }
+
+        .countdown-box.urgent {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(239, 68, 68, 0.1));
+            border-color: var(--danger);
+            animation: pulse 1s infinite;
+        }
+
+        .countdown-box.urgent h4,
+        .countdown-box.urgent .countdown {
+            color: var(--danger);
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.02);
+            }
+        }
+
+        @keyframes pulse-green {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+
+            70% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        .pulse-anim {
+            animation: pulse-green 2s infinite;
+        }
+
+        .days-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .day-mini {
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* No Schedule */
+        .no-schedule {
+            background: var(--bg-card);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        .no-schedule-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .no-schedule h2 {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .no-schedule p {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        /* Footer */
+        .footer-branding {
+            text-align: center;
+            padding: 12px 20px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: auto;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .footer-branding span {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .footer-branding .sep {
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: 60px;
+                flex-direction: row;
+                padding: 0 20px;
+                justify-content: space-between;
+                border-left: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .brand-logo {
+                margin-bottom: 0;
+                width: 40px;
+                height: 40px;
+            }
+
+            .nav-menu {
+                display: flex;
+                gap: 10px;
+            }
+
+            .nav-item {
+                margin-bottom: 0;
+            }
+
+            .nav-bottom {
+                display: none;
+            }
+
+            .main-content {
+                padding: 16px;
+            }
+
+            .time-hero h2 {
+                font-size: 2.5rem;
+            }
+
+            .cards-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .medicine-card {
+                padding: 12px;
+            }
+
+            .card-header {
+                gap: 8px;
+                margin-bottom: 12px;
+            }
+
+            .card-icon {
+                width: 36px;
+                height: 36px;
+                font-size: 1.2rem;
+            }
+
+            .card-title {
+                font-size: 0.9rem;
+            }
+
+            .schedule-time {
+                padding: 10px;
+                margin-bottom: 12px;
+            }
+
+            .schedule-time .time {
+                font-size: 1.8rem;
+            }
+
+            .schedule-time .label {
+                font-size: 0.7rem;
+            }
+
+            .countdown-box {
+                padding: 10px;
+            }
+
+            .countdown-box h4 {
+                font-size: 0.7rem;
+                margin-bottom: 5px;
+            }
+
+            .countdown-box .countdown {
+                font-size: 1.2rem;
+            }
+
+            .days-chips {
+                margin-top: 10px;
+                gap: 4px;
+            }
+
+            .day-mini {
+                padding: 4px 8px;
+                font-size: 0.65rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand-logo">💊</div>
+            <nav class="nav-menu">
+                <a href="/" class="nav-item" title="لوحة التحكم">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                </a>
+                <a href="/patient" class="nav-item active" title="شاشة المريض">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </a>
+                <a href="/statistics" class="nav-item" title="الإحصائيات">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                </a>
+            </nav>
+            <div class="nav-bottom">
+                <div class="nav-item" onclick="toggleTheme()" title="تغيير الوضع">
+                    <span id="theme-icon">🌙</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="main-content">
+            <header class="header">
+                <div class="header-title">
+                    <h1>متابعة مواعيد الأدوية</h1>
+                    <p>تذكير بمواعيد جرعاتك اليومية</p>
+                </div>
+            </header>
+
+            <!-- Hero Row (Time + Camera) -->
+            <div class="hero-row">
+                <!-- Time Section (Right in RTL) -->
+                <div class="time-hero">
+                    <h2 id="current-time">00:00:00</h2>
+                    <p id="current-date">جاري التحميل...</p>
+                </div>
+
+                <!-- Camera Section (Left in RTL) -->
+                <div id="camera-container">
+                    <div class="camera-box">
+                        <img id="camera-feed-img" src="/video"
+                            style="width: 100%; height: 100%; object-fit: cover; display: block;" alt="بث الكاميرا">
+
+                        <div id="camera-placeholder"
+                            style="text-align: center; color: var(--text-muted); display: none;">
+                            <div style="font-size: 2.5rem; margin-bottom: 5px;">📷</div>
+                            <p style="margin: 0; font-size: 0.9rem;">الكاميرا قيد التشغيل</p>
+                        </div>
+
+                        <div id="camera-status-label"
+                            style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 8px; font-size: 0.7rem; display:block;">
+                            🔴 بث حي
+                        </div>
+                    </div>
+                    <p id="camera-instruction"
+                        style="margin-top: 10px; color: var(--text-muted); text-align: center; display: none;">
+                        يرجى النظر للكاميرا لتأكيد الهوية
+                    </p>
+                    <div style="text-align: center; margin-top: 15px;">
+                        <button onclick="verifyFace()" class="btn-large"
+                            style="background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 12px; font-size: 1rem; cursor: pointer;">
+                            📸 تحقق من الوجه
+                        </button>
+                    </div>
+                    <div id="face-status"
+                        style="text-align: center; margin-top: 10px; font-weight: bold; min-height: 24px;"></div>
+                </div>
+            </div>
+
+            <style>
+                .hero-row {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 30px;
+                    align-items: center;
+                    margin-bottom: 40px;
+                }
+
+                #camera-container {
+                    text-align: left;
+                }
+
+                .time-hero {
+                    text-align: right;
+                    padding-right: 20px;
+                }
+
+                .time-hero h2 {
+                    font-size: 5rem;
+                    line-height: 1;
+                    margin-bottom: 10px;
+                }
+
+                .time-hero p {
+                    font-size: 1.2rem;
+                    opacity: 0.8;
+                }
+
+                @media (max-width: 900px) {
+                    .hero-row {
+                        grid-template-columns: 1fr;
+                        text-align: center;
+                    }
+
+                    #camera-container {
+                        text-align: center;
+                    }
+
+                    .time-hero {
+                        text-align: center;
+                        padding-right: 0;
+                    }
+                }
+
+                .camera-box {
+                    position: relative;
+                    width: 100%;
+                    height: 400px;
+                    border-radius: 20px;
+                    overflow: hidden;
+                    border: 4px solid var(--border-color);
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                    background: #1e1e1e;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+            </style>
+
+            <!-- Cards -->
+            <div class="cards-grid" id="medicines-container"></div>
+
+            <!-- No Schedule -->
+            <div class="no-schedule" id="no-schedule" style="display: none;">
+                <div class="no-schedule-icon">📅</div>
+                <h2>لا توجد مواعيد مجدولة</h2>
+                <p>يرجى ضبط مواعيد الأدوية من لوحة التحكم</p>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer-branding">
+                <span>مدرسة عبدالله بن علي المسند الثانوية للبنين</span> • مشروع الروبوت الذكي لتوزيع الأدوية • عمل
+                الطلاب:
+                محمد وليد
+                عمارة & عبد الله
+                خالد النعيمي <span class="sep">|</span> إشراف: هشام عبد الرحمان سالمي
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let schedules = {};
+        let selectedDays = {};
+        let activeDoses = {}; // Track active confirmation state
+        let audioPlayed = {};
+
+        // Clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('current-time').textContent =
+                `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+            const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+            const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+            document.getElementById('current-date').textContent = `${days[now.getDay()]}، ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Fetch
+        async function fetchSchedules() {
+            try {
+                const res = await fetch('/api/schedules');
+                const data = await res.json();
+                schedules = {}; selectedDays = {};
+                for (let boxId in data) {
+                    if (data[boxId]) {
+                        schedules[boxId] = { hour: data[boxId].hour, minute: data[boxId].minute, enabled: data[boxId].enabled, name: data[boxId].medicine_name || `الدواء ${boxId}` };
+                        selectedDays[boxId] = data[boxId].days || [];
+                        // Ensure active state exists
+                        if (activeDoses[boxId] === undefined) activeDoses[boxId] = false;
+                    }
+                }
+                renderCards();
+            } catch (e) {
+                document.getElementById('no-schedule').style.display = 'block';
+                document.getElementById('medicines-container').innerHTML = '';
+            }
+        }
+
+        // Render
+        function renderCards() {
+            const container = document.getElementById('medicines-container');
+            const noSchedule = document.getElementById('no-schedule');
+            let hasActive = false;
+            let html = '';
+            const dayNames = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
+
+            for (let boxId in schedules) {
+                if (schedules[boxId].enabled && schedules[boxId].hour !== null) {
+                    hasActive = true;
+                    // Cycle styles: Odd -> Green, Even -> Purple
+                    const accent = boxId % 2 != 0 ? 'green' : 'purple';
+                    const icon = boxId % 2 != 0 ? '💊' : '💉';
+                    html += `
+            <div class="medicine-card ${accent}" id="card-${boxId}">
+              <div class="card-header">
+                <div class="card-icon">${icon}</div>
+                <div class="card-title">${schedules[boxId].name}</div>
+              </div>
+              <div class="schedule-time">
+                <div class="time">${String(schedules[boxId].hour).padStart(2, '0')}:${String(schedules[boxId].minute).padStart(2, '0')}</div>
+                <div class="label">موعد الجرعة</div>
+              </div>
+              
+              <!-- Action Buttons -->
+              <div class="actions" style="margin-top: 20px; text-align: center;">
+                  <!-- Manual Open (Small/Secondary) -->
+                  <div id="wrapper-open-${boxId}">
+                    <button onclick="openBox(${boxId})" class="btn-large action-btn" id="btn-open-${boxId}" 
+                            style="background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 10px; font-size: 0.9rem; margin-bottom: 10px; width: auto; display: inline-flex;">
+                        <span>🚨 فتح للطوارئ</span>
+                    </button>
+                  </div>
+                  
+                  <!-- Confirm Taken (Huge/Primary) - Hidden by default -->
+                  <button onclick="confirmTaken(${boxId})" class="btn-large btn-primary action-btn pulse-anim" id="btn-confirm-${boxId}" 
+                          style="display: none; background: var(--success); font-size: 1.5rem; padding: 25px; width: 100%; border-radius: 20px; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);">
+                      <span>✅ تم أخذ الدواء</span>
+                  </button>
+              </div>
+
+              <div class="countdown-box" id="countdown-box-${boxId}" style="margin-top: 15px;">
+                <h4>⏰ الوقت المتبقي</h4>
+                <div class="countdown" id="countdown-${boxId}">--:--:--</div>
+              </div>
+              <div class="days-chips">
+                ${selectedDays[boxId].map(d => `<span class="day-mini">${dayNames[d]}</span>`).join('')}
+              </div>
+            </div>
+          `;
+                }
+            }
+
+            if (hasActive) {
+                container.innerHTML = html;
+                noSchedule.style.display = 'none';
+            } else {
+                container.innerHTML = '';
+                noSchedule.style.display = 'block';
+            }
+            // Update UI state immediately after render
+            updateUIState();
+        }
+
+        // Countdown
+        function calculateRemaining(boxId) {
+            if (!schedules[boxId] || !schedules[boxId].enabled) return null;
+            const now = new Date();
+            const currentDay = now.getDay();
+            for (let i = 0; i <= 7; i++) {
+                const checkDay = (currentDay + i) % 7;
+                if (selectedDays[boxId].includes(checkDay)) {
+                    const nextDate = new Date();
+                    nextDate.setDate(nextDate.getDate() + i);
+                    nextDate.setHours(schedules[boxId].hour, schedules[boxId].minute, 0, 0);
+                    const diff = nextDate - now;
+                    if (diff > -60000) return Math.floor(diff / 1000); // Allow 1 min past
+                }
+            }
+            return null;
+        }
+
+        function playAlert() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const now = ctx.currentTime;
+            [600, 800, 1000, 800, 1000].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.frequency.value = freq; osc.type = 'square';
+                gain.gain.setValueAtTime(0.5, now + i * 0.2);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.2 + 0.15);
+                osc.start(now + i * 0.2); osc.stop(now + i * 0.2 + 0.15);
+            });
+        }
+
+        function updateUIState() {
+            for (let boxId in schedules) {
+                const btnConfirm = document.getElementById(`btn-confirm-${boxId}`);
+                const wrapperOpen = document.getElementById(`wrapper-open-${boxId}`);
+                const countdownBox = document.getElementById(`countdown-box-${boxId}`);
+
+                if (!btnConfirm) continue;
+
+                if (activeDoses[boxId]) {
+                    // ACTIVE STATE: Waiting for confirmation
+                    btnConfirm.style.display = 'flex';
+                    if (wrapperOpen) wrapperOpen.style.display = 'none';
+                    if (countdownBox) countdownBox.style.display = 'none';
+                } else {
+                    // NORMAL STATE
+                    btnConfirm.style.display = 'none';
+                    if (wrapperOpen) wrapperOpen.style.display = 'block';
+                    if (countdownBox) countdownBox.style.display = 'block';
+                }
+            }
+        }
+
+        function updateCountdowns() {
+            const now = new Date();
+
+            for (let boxId in schedules) {
+                if (schedules[boxId].enabled) {
+
+                    // 1. Check for Automatic Trigger (Time Match)
+                    const s = schedules[boxId];
+                    if (now.getHours() === s.hour && now.getMinutes() === s.minute && now.getSeconds() < 10) {
+                        // Activate if it's the right time and we haven't already
+                        if (!activeDoses[boxId]) {
+                            activeDoses[boxId] = true;
+                            playAlert();
+
+                            // --- AUTO MOVEMENT TRIGGER ---
+                            fetch('/robot/start', { method: 'POST' })
+                                .catch(err => console.error("Robot Start Error:", err));
+                            // -----------------------------
+
+                            updateUIState();
+                        }
+                    }
+
+                    // 2. Update Countdown Text if NOT active
+                    if (!activeDoses[boxId]) {
+                        const remaining = calculateRemaining(boxId);
+                        const el = document.getElementById(`countdown-${boxId}`);
+                        const box = document.getElementById(`countdown-box-${boxId}`);
+
+                        if (el && remaining !== null) {
+                            // If diff returned is very large (next week) but we just passed the time?
+                            // Logic handled by Time Match above.
+
+                            const h = Math.floor(remaining / 3600);
+                            const m = Math.floor((remaining % 3600) / 60);
+                            const sec = remaining % 60;
+                            el.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+
+                            if (remaining <= 300 && remaining > 0) {
+                                box.classList.add('urgent');
+                            } else {
+                                box.classList.remove('urgent');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Theme
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            if (html.getAttribute('data-theme') === 'light') {
+                html.removeAttribute('data-theme'); icon.textContent = '🌙'; localStorage.setItem('theme', 'dark');
+            } else {
+                html.setAttribute('data-theme', 'light'); icon.textContent = '☀️'; localStorage.setItem('theme', 'light');
+            }
+        }
+
+        (function () {
+            if (localStorage.getItem('theme') === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                document.getElementById('theme-icon').textContent = '☀️';
+            }
+        })();
+
+        // Check Settings
+        async function checkSettings() {
+            try {
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                const camContainer = document.getElementById('camera-container');
+
+                if (data.auth_enabled) {
+                    camContainer.style.display = 'block';
+                } else {
+                    camContainer.style.display = 'none';
+                }
+            } catch (e) {
+                console.log("Error checking settings");
+            }
+        }
+
+        checkSettings();
+
+        fetchSchedules();
+        setInterval(updateCountdowns, 1000);
+        setInterval(fetchSchedules, 30000);
+
+        // Auto Fullscreen on first interaction
+        function enterFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+            // Remove listener after first use
+            document.removeEventListener('click', enterFullscreen);
+            document.removeEventListener('touchstart', enterFullscreen);
+        }
+
+        // Check if not already in fullscreen
+        if (!document.fullscreenElement) {
+            document.addEventListener('click', enterFullscreen, { once: true });
+            document.addEventListener('touchstart', enterFullscreen, { once: true });
+        }
+        // Global Timeout Trackers
+        let safetyTimers = {};
+
+        // Actions
+        async function openBox(boxId) {
+            // if (!confirm('هل أنت متأكد من فتح الصندوق ' + boxId + '؟')) return; // Removed for smoother auto-flow if needed, but manual open still asks.
+            // Keeping confirm for manual button, but logic flow might differ.
+            // Let's keep manual confirm.
+
+            const btnOpen = document.getElementById(`btn-open-${boxId}`);
+            btnOpen.disabled = true;
+            btnOpen.innerHTML = '⏳ جاري الفتح...';
+
+            try {
+                const res = await fetch('/open_box', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ box: boxId })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    // Activate Confirmation Mode
+                    activeDoses[boxId] = true;
+                    updateUIState();
+
+                    // --- SAFETY TIMEOUT START ---
+                    // Start 60s timer waiting for "Confirm Taken"
+                    if (safetyTimers[boxId]) clearTimeout(safetyTimers[boxId]);
+
+                    safetyTimers[boxId] = setTimeout(async () => {
+                        // If we are still in active state (means user hasn't confirmed yet)
+                        if (activeDoses[boxId]) {
+                            // Timeout reached!
+                            try {
+                                // Close box logic? (Not implemented, assumes open=dispense)
+                                // Just Return Home
+                                await fetch('/return_home', { method: 'POST' });
+                                alert("⏰ انتهت مهلة تأكيد الدواء! سيعود الروبوت الآن.");
+                                window.location.reload();
+                            } catch (e) { console.error(e); }
+                        }
+                    }, 60000); // 60 Seconds Timeout
+                    // -----------------------------
+
+                } else {
+                    // Error Handling
+                    if (res.status === 403) {
+                        // Auth Failed - Enforce 1 Minute Wait
+                        alert(`❌ ${data.status}\nيرجى الانتظار دقيقة قبل المحاولة مرة أخرى.`);
+
+                        let timeLeft = 60;
+                        btnOpen.disabled = true;
+
+                        const lockInterval = setInterval(() => {
+                            btnOpen.innerHTML = `⛔ انتظار (${timeLeft}s)`;
+                            timeLeft--;
+
+                            if (timeLeft < 0) {
+                                clearInterval(lockInterval);
+                                btnOpen.disabled = false;
+                                btnOpen.innerHTML = '🔄 إعادة المحاولة';
+                            }
+                        }, 1000);
+
+                        return; // Exit function so finally block doesn't reset button immediately
+                    } else {
+                        alert(data.status);
+                    }
+                }
+            } catch (e) {
+                alert('خطأ في الاتصال');
+            } finally {
+                // If NOT locked (not 403), reset button
+                if (btnOpen.disabled && btnOpen.innerHTML.indexOf('انتظار') === -1) {
+                    btnOpen.disabled = false;
+                    btnOpen.innerHTML = '🚨 فتح للطوارئ';
+                }
+            }
+        }
+
+        async function confirmTaken(boxId) {
+            const btnConfirm = document.getElementById(`btn-confirm-${boxId}`);
+            btnConfirm.disabled = true;
+
+            // Clear Safety Timeout since user acted
+            if (safetyTimers[boxId]) clearTimeout(safetyTimers[boxId]);
+
+            // ... rest of confirm logic
+            btnConfirm.innerHTML = '⏳ جاري الرجوع...';
+
+            try {
+                // 1. Return Home
+                const res = await fetch('/return_home', { method: 'POST' });
+                const data = await res.json();
+
+                if (res.ok) {
+                    alert('شكراً لك! نتمنى لك الشفاء العاجل ❤️');
+                    // Deactivate Confirmation Mode
+                    activeDoses[boxId] = false;
+                    updateUIState();
+                } else {
+                    alert('حدث خطأ أثناء الرجوع: ' + data.status);
+                }
+            } catch (e) {
+                alert('خطأ في الاتصال');
+            } finally {
+                btnConfirm.disabled = false;
+                btnConfirm.innerHTML = '✅ تم أخذ الدواء';
+            }
+        }
+        // Face Verification
+        function verifyFace() {
+            const statusDiv = document.getElementById("face-status");
+            if (statusDiv) statusDiv.innerHTML = "⏳ جاري التحقق...";
+
+            fetch("/verify-face")
+                .then(res => res.json())
+                .then(data => {
+                    if (data.verified) {
+                        const msg = `✅ تم التحقق: ${data.message || "مسموح"}`;
+                        if (statusDiv) statusDiv.innerHTML = `<span style="color: var(--success)">${msg}</span>`;
+                        else alert(msg);
+                    } else {
+                        const msg = `❌ غير مصرح: ${data.message || "وجه غير معروف"}`;
+                        if (statusDiv) statusDiv.innerHTML = `<span style="color: var(--danger)">${msg}</span>`;
+                        else alert(msg);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    const msg = "❌ خطأ في الاتصال";
+                    if (statusDiv) statusDiv.innerHTML = `<span style="color: var(--danger)">${msg}</span>`;
+                    else alert(msg);
+                });
+        }
+    </script>
+</body>
+
+</html>

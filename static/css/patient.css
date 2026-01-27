@@ -1,0 +1,508 @@
+/* 
+ * شاشة المريض - Patient Styles 
+ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    color: #333;
+    min-height: 100vh;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding: 20px;
+    background: linear-gradient(to right, #4b6cb7, #182848);
+    color: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.header-content {
+    flex: 1;
+    text-align: center;
+}
+
+h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    color: white;
+    font-weight: 700;
+}
+
+h1 svg {
+    width: 40px;
+    height: 40px;
+    fill: #ffd166;
+}
+
+.subtitle {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    color: white;
+}
+
+.control-btn {
+    background: white;
+    color: #4b6cb7;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+.control-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.control-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.medication-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.medication-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+}
+
+.medication-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+}
+
+.medication-card.urgent {
+    animation: pulse 1s infinite;
+    border: 3px solid #ef4444;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+.card-header {
+    padding: 20px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.medication-1 .card-header {
+    background: linear-gradient(to right, #11998e, #38ef7d);
+}
+
+.medication-2 .card-header {
+    background: linear-gradient(to right, #4A00E0, #8E2DE2);
+}
+
+.medication-name {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: white;
+}
+
+.medication-icon {
+    font-size: 2.5rem;
+    opacity: 0.9;
+}
+
+.medication-icon svg {
+    width: 40px;
+    height: 40px;
+    fill: white;
+}
+
+.card-content {
+    padding: 25px;
+}
+
+.time-display {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    border: 2px dashed #dee2e6;
+}
+
+.current-time {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #182848;
+    display: block;
+    margin-bottom: 5px;
+    direction: ltr;
+    font-variant-numeric: tabular-nums;
+}
+
+.time-label {
+    color: #6c757d;
+    font-size: 1.1rem;
+}
+
+.next-dose {
+    background: #fff9e6;
+    padding: 15px;
+    border-radius: 10px;
+    border-right: 5px solid #ffc107;
+    margin-top: 15px;
+}
+
+.next-dose h3 {
+    color: #856404;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.2rem;
+}
+
+.next-dose h3 svg {
+    width: 20px;
+    height: 20px;
+    fill: #ffc107;
+}
+
+.next-dose-time {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #182848;
+    direction: ltr;
+    text-align: center;
+    margin: 10px 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.next-dose-time.warning {
+    color: #f59e0b;
+    font-size: 1.8rem;
+}
+
+.next-dose-time.danger {
+    color: #ef4444;
+    font-size: 2rem;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.dose-description {
+    color: #666;
+    text-align: center;
+    margin-top: 10px;
+    font-size: 0.95rem;
+}
+
+.instructions {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.instructions svg {
+    width: 16px;
+    height: 16px;
+    fill: #4b6cb7;
+    margin-left: 5px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.no-schedule {
+    background: white;
+    border-radius: 15px;
+    padding: 80px;
+    text-align: center;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+}
+
+.no-schedule-icon {
+    font-size: 9rem;
+    color: #d1d5db;
+    margin-bottom: 24px;
+}
+
+.no-schedule-icon svg {
+    width: 144px;
+    height: 144px;
+    fill: #d1d5db;
+}
+
+.no-schedule h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #6b7280;
+    margin-bottom: 16px;
+}
+
+.no-schedule p {
+    font-size: 1.2rem;
+    color: #9ca3af;
+}
+
+footer {
+    background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.footer-message {
+    margin-bottom: 15px;
+}
+
+.footer-message p {
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+.footer-info {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.footer-info .school {
+    font-weight: 700;
+    margin-bottom: 8px;
+    font-size: 1em;
+}
+
+.footer-info .project {
+    font-size: 0.85em;
+    margin: 5px 0;
+}
+
+.footer-info .students {
+    font-size: 0.8em;
+    opacity: 0.9;
+    margin: 5px 0;
+}
+
+.footer-info .supervisor {
+    font-size: 0.75em;
+    opacity: 0.8;
+    font-style: italic;
+}
+
+/* تحسينات لشاشة 7 بوصة (800×480) */
+@media (max-width: 900px) {
+    body {
+        padding: 10px;
+    }
+
+    header {
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    h1 {
+        font-size: 1.3rem;
+    }
+
+    h1 svg {
+        width: 25px;
+        height: 25px;
+    }
+
+    .subtitle {
+        font-size: 0.85rem;
+    }
+
+    .control-btn {
+        padding: 8px 16px;
+        font-size: 0.85rem;
+    }
+
+    .medication-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 15px;
+    }
+
+    .medication-card {
+        border-radius: 12px;
+    }
+
+    .card-header {
+        padding: 15px;
+    }
+
+    .medication-name {
+        font-size: 1.3rem;
+    }
+
+    .medication-icon svg {
+        width: 30px;
+        height: 30px;
+    }
+
+    .card-content {
+        padding: 15px;
+    }
+
+    .current-time {
+        font-size: 1.5rem;
+    }
+
+    .next-dose-time {
+        font-size: 1.2rem;
+    }
+
+    .next-dose-time.warning {
+        font-size: 1.4rem;
+    }
+
+    .next-dose-time.danger {
+        font-size: 1.6rem;
+    }
+
+    .no-schedule {
+        padding: 40px 20px;
+    }
+
+    .no-schedule-icon svg {
+        width: 80px;
+        height: 80px;
+    }
+
+    .no-schedule h2 {
+        font-size: 1.3rem;
+    }
+
+    .no-schedule p {
+        font-size: 0.9rem;
+    }
+}
+
+/* Camera Feed Styles */
+.camera-box {
+    display: inline-block;
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    height: 280px;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 3px solid var(--border-color, #dee2e6);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    background: #1e1e1e;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+.hero-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    align-items: center;
+    margin-bottom: 40px;
+}
+
+#camera-container {
+    text-align: left;
+    display: flex;
+    justify-content: center;
+    /* Center initially if needed, or left */
+}
+
+.time-hero {
+    text-align: right;
+    padding-right: 20px;
+}
+
+.time-hero h2 {
+    font-size: 5rem;
+    line-height: 1;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+.time-hero p {
+    font-size: 1.2rem;
+    opacity: 0.8;
+}
+
+@media (max-width: 900px) {
+    .hero-row {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+
+    #camera-container {
+        text-align: center;
+        justify-content: center;
+    }
+
+    .time-hero {
+        text-align: center;
+        padding-right: 0;
+    }
+}

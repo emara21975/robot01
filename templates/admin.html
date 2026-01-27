@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MEDIBOT OS | لوحة التحكم</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%236366f1' rx='20' width='100' height='100'/><text x='50' y='68' font-size='50' text-anchor='middle' fill='white'>💊</text></svg>">
+
+    <style>
+        :root {
+            --bg-body: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.6);
+            --bg-card-hover: rgba(30, 41, 59, 0.8);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.4);
+            --secondary: #ec4899;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 12px;
+            --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.15);
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f1f5f9;
+            --bg-card: rgba(255, 255, 255, 0.85);
+            --bg-card-hover: rgba(255, 255, 255, 0.95);
+            --border-color: rgba(0, 0, 0, 0.1);
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --primary: #4f46e5;
+            --secondary: #db2777;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --accent: #0891b2;
+        }
+
+        [data-theme="light"] .sidebar {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="light"] .modern-input {
+            background: rgba(0, 0, 0, 0.03);
+            border-color: rgba(0, 0, 0, 0.15);
+            color: #0f172a;
+        }
+
+        [data-theme="light"] .time-input-wrapper input {
+            background: rgba(0, 0, 0, 0.03);
+            border-color: rgba(0, 0, 0, 0.15);
+            color: #0f172a;
+        }
+
+        [data-theme="light"] .day-chip {
+            background: linear-gradient(135deg, rgba(230, 230, 230, 1), rgba(200, 200, 200, 1));
+            color: #374151;
+            box-shadow:
+                0 0.05em 0.05em -0.01em rgba(0, 0, 0, 0.15),
+                0.08em 0.15em 0.1em -0.01em rgba(0, 0, 0, 0.1),
+                inset 0.02em 0.02em 0.05em rgba(255, 255, 255, 0.8);
+        }
+
+        [data-theme="light"] .day-chip:hover {
+            box-shadow:
+                0 0.02em 0.02em -0.01em rgba(0, 0, 0, 0.1),
+                inset 0.02em 0.02em 0.05em rgba(255, 255, 255, 0.6);
+        }
+
+        [data-theme="light"] .day-chip.active {
+            background: linear-gradient(135deg, #4f46e5, #6366f1);
+            color: white;
+        }
+
+        [data-theme="light"] .logs-card {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        [data-theme="light"] .action-btn {
+            background: rgba(0, 0, 0, 0.02);
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="light"] .action-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        [data-theme="light"] .countdown-display {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        [data-theme="light"] .icon-btn {
+            background: rgba(0, 0, 0, 0.05);
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-body);
+            background-image:
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 80px;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 0;
+            z-index: 10;
+        }
+
+        .brand-logo {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 40px;
+            box-shadow: var(--shadow-glow);
+            font-size: 1.5rem;
+        }
+
+        .nav-item {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            text-decoration: none;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: var(--bg-card);
+            color: var(--text-main);
+        }
+
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            left: -14px;
+            width: 4px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 0 4px 4px 0;
+        }
+
+        .nav-item svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .nav-bottom {
+            margin-top: auto;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .header-title h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, var(--text-main), var(--text-muted));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-title p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .icon-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .icon-btn:hover {
+            transform: scale(1.05);
+            background: var(--bg-card-hover);
+        }
+
+        /* Bento Grid */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            grid-template-rows: auto auto;
+            gap: 24px;
+            flex: 1;
+        }
+
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-soft);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Status Card */
+        .status-card {
+            grid-column: span 8;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 2;
+        }
+
+        .status-info h2 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        .robot-visual {
+            width: 180px;
+            height: 180px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .robot-circle {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.1), transparent 70%);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .robot-circle:nth-child(1) {
+            width: 100%;
+            height: 100%;
+            border-color: var(--primary);
+            opacity: 0.3;
+        }
+
+        .robot-circle:nth-child(2) {
+            width: 80%;
+            height: 80%;
+            animation-delay: 1s;
+            border-color: var(--secondary);
+            opacity: 0.3;
+        }
+
+        .robot-circle:nth-child(3) {
+            width: 60%;
+            height: 60%;
+            animation-delay: 2s;
+            border-color: var(--accent);
+            opacity: 0.3;
+        }
+
+        .robot-icon {
+            font-size: 4rem;
+            z-index: 2;
+            filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.3));
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        /* Actions Card */
+        .actions-card {
+            grid-column: span 4;
+            display: grid;
+            grid-template-rows: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 0 20px;
+            cursor: pointer;
+            transition: 0.2s;
+            color: var(--text-main);
+            text-decoration: none;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(-4px);
+        }
+
+        .action-btn svg {
+            width: 24px;
+            height: 24px;
+            color: var(--primary);
+        }
+
+        .action-btn span {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        /* Schedule Cards */
+        .schedule-card {
+            grid-column: span 6;
+            min-height: 320px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .modern-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 14px 16px;
+            color: var(--text-main);
+            font-size: 1rem;
+            font-family: inherit;
+            transition: 0.2s;
+        }
+
+        .modern-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .day-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .day-chip {
+            flex: 1;
+            text-align: center;
+            padding: 10px 0;
+            border-radius: 999px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border: none;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.25s ease;
+            box-shadow:
+                0 0.05em 0.05em -0.01em rgba(5, 5, 5, 0.8),
+                0 0.01em 0.01em -0.01em rgba(5, 5, 5, 0.4),
+                0.1em 0.2em 0.08em -0.01em rgba(5, 5, 5, 0.2);
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .day-chip:hover {
+            transform: translateY(1px);
+            box-shadow:
+                0 0.02em 0.02em -0.01em rgba(5, 5, 5, 0.6),
+                0 0 0 0 rgba(5, 5, 5, 0.3);
+        }
+
+        .day-chip:active {
+            transform: scale(0.95);
+        }
+
+        .day-chip.active {
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            color: white;
+            font-weight: 600;
+            box-shadow:
+                0 0.05em 0.05em -0.01em rgba(99, 102, 241, 0.5),
+                0 0.01em 0.01em -0.01em rgba(99, 102, 241, 0.3),
+                0.1em 0.2em 0.15em -0.01em rgba(99, 102, 241, 0.3),
+                0 0 15px rgba(99, 102, 241, 0.4);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .day-chip.active:hover {
+            box-shadow:
+                0 0.02em 0.02em -0.01em rgba(99, 102, 241, 0.4),
+                0 0 10px rgba(99, 102, 241, 0.5);
+        }
+
+        .time-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .time-input-wrapper {
+            position: relative;
+            flex: 1;
+        }
+
+        .time-input-wrapper input {
+            width: 100%;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            padding: 10px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.2);
+            color: var(--text-main);
+            font-family: monospace;
+        }
+
+        .time-separator {
+            align-self: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .btn-large {
+            width: 100%;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            border: none;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: 0.2s;
+            color: white;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--secondary), #db2777);
+            box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
+        }
+
+        .countdown-display {
+            margin-top: 16px;
+            text-align: center;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--radius-sm);
+            font-family: monospace;
+            color: var(--accent);
+            font-size: 1.1rem;
+            display: none;
+        }
+
+        .countdown-display.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        /* Logs */
+        .logs-card {
+            grid-column: span 12;
+            height: 160px;
+            background: #000;
+            border: 1px solid #333;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logs-header {
+            padding: 10px 20px;
+            border-bottom: 1px solid #333;
+            color: #666;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .logs-body {
+            flex: 1;
+            padding: 15px 20px;
+            overflow-y: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            color: #10b981;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .logs-body::-webkit-scrollbar {
+            display: none;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .log-time {
+            color: #555;
+            min-width: 80px;
+        }
+
+        /* Footer */
+        .footer-branding {
+            grid-column: span 12;
+            text-align: center;
+            padding: 12px 20px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .footer-branding span {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .footer-branding .sep {
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        /* Medium screens - tablet landscape */
+        @media (max-width: 1200px) and (min-width: 769px) {
+            .bento-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .status-card {
+                width: 100%;
+            }
+
+            .actions-card {
+                width: 100%;
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                grid-template-rows: auto;
+                min-height: auto;
+            }
+
+            .action-btn {
+                padding: 16px 20px;
+            }
+
+            .schedule-card {
+                width: 100%;
+            }
+
+            .logs-card {
+                width: 100%;
+            }
+
+            .sidebar {
+                width: 60px;
+            }
+
+            .main-content {
+                overflow-y: auto;
+            }
+        }
+
+        /* Small screens - mobile */
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: 60px;
+                flex-direction: row;
+                padding: 0 20px;
+                justify-content: space-between;
+                border-left: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .brand-logo {
+                margin-bottom: 0;
+                width: 40px;
+                height: 40px;
+            }
+
+            .nav-menu {
+                display: flex;
+                gap: 10px;
+            }
+
+            .nav-item {
+                margin-bottom: 0;
+            }
+
+            .nav-bottom {
+                display: none;
+            }
+
+            .main-content {
+                padding: 16px;
+                overflow-y: auto;
+            }
+
+            .bento-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .status-card {
+                width: 100%;
+            }
+
+            .actions-card {
+                width: 100%;
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                min-height: auto;
+                gap: 10px;
+            }
+
+            .action-btn {
+                padding: 12px;
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+
+            .action-btn span {
+                font-size: 0.8rem;
+            }
+
+            .schedule-card {
+                width: 100%;
+                min-height: auto;
+            }
+
+            .logs-card {
+                width: 100%;
+            }
+
+            .day-chip {
+                padding: 8px 0;
+                font-size: 0.7rem;
+            }
+
+            .time-input-wrapper input {
+                font-size: 1.2rem;
+                padding: 8px;
+            }
+
+            .btn-large {
+                padding: 14px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: .4s;
+            transition: .4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            -webkit-transition: .4s;
+            transition: .4s;
+        }
+
+        input:checked+.slider {
+            background-color: var(--success);
+        }
+
+        input:focus+.slider {
+            box-shadow: 0 0 1px var(--success);
+        }
+
+        input:checked+.slider:before {
+            -webkit-transform: translateX(22px);
+            -ms-transform: translateX(22px);
+            transform: translateX(22px);
+        }
+
+        .slider.round {
+            border-radius: 34px;
+        }
+
+        .slider.round:before {
+            border-radius: 50%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand-logo">💊</div>
+            <nav class="nav-menu">
+                <a href="/" class="nav-item active" title="الرئيسية">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                </a>
+                <a href="/patient" class="nav-item" title="شاشة المريض">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </a>
+                <a href="/statistics" class="nav-item" title="الإحصائيات">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                </a>
+            </nav>
+            <div class="nav-bottom">
+                <div class="nav-item" onclick="toggleTheme()" title="تغيير الوضع">
+                    <span id="theme-icon">🌙</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <div class="header-title">
+                    <h1>لوحة التحكم </h1>
+                    <p>مشروع الروبوت الذكي لتوزيع الأدوية - MEDI BOX</p>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn" onclick="toggleRobot()" id="robot-toggle-btn" title="تشغيل/إيقاف الروبوت">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path
+                                d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+            </header>
+
+            <div class="bento-grid">
+                <!-- Status Card -->
+                <div class="card status-card">
+                    <div class="card-header">
+                        <span class="card-title">⚡ حالة النظام</span>
+                        <div class="status-pill">
+                            <span class="status-dot"></span>
+                            <span id="status-text">نشط</span>
+                        </div>
+                    </div>
+                    <div class="status-content">
+                        <div class="status-info">
+                            <h2 id="clock-main">00:00:00</h2>
+                            <p style="color: var(--text-muted); margin-bottom: 20px;" id="date-display">التاريخ</p>
+                            <div style="display: flex; gap: 15px;">
+                                <div
+                                    style="background: rgba(255,255,255,0.05); padding: 10px 15px; border-radius: 12px;">
+                                    <span
+                                        style="display:block; font-size: 0.75rem; color: var(--text-muted);">الجداول</span>
+                                    <span style="font-weight: 700; color: var(--success);" id="active-count">0</span>
+                                </div>
+                                <div
+                                    style="background: rgba(255,255,255,0.05); padding: 10px 15px; border-radius: 12px;">
+                                    <span
+                                        style="display:block; font-size: 0.75rem; color: var(--text-muted);">الحالة</span>
+                                    <span style="font-weight: 700; color: var(--primary);">متصل</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="robot-visual">
+                            <div class="robot-circle"></div>
+                            <div class="robot-circle"></div>
+                            <div class="robot-circle"></div>
+                            <div class="robot-icon">🤖</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card actions-card">
+                    <div class="action-btn" onclick="loadMode()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <span>تحميل الدواء صندوق 2</span>
+                    </div>
+                    <div class="action-btn" onclick="goZero()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                            <path d="M21 3v5h-5"></path>
+                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                        </svg>
+                        <span>تحميل الدواء صندوق 1</span>
+                    </div>
+                    <div class="action-btn" id="robot-toggle-btn" onclick="toggleRobot()"
+                        style="border-color: rgba(16, 185, 129, 0.3);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                        <span id="robot-toggle-text" style="color: #10b981;">تشغيل الروبوت</span>
+                    </div>
+                    <div class="action-btn" style="border-color: rgba(239, 68, 68, 0.3);" onclick="emergencyStop()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        </svg>
+                        <span style="color: #ef4444;">طوارئ</span>
+                    </div>
+                </div>
+
+                <!-- Settings Card -->
+                <div class="card settings-card" style="grid-column: span 12;">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span>⚙️ إعدادات النظام</span>
+                        </div>
+                    </div>
+
+                    <div
+                        style="display: flex; align-items: center; justify-content: space-between; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid var(--border-color);">
+                        <div style="display:flex; gap: 15px; align-items:center;">
+                            <div style="font-size: 2rem;">📸</div>
+                            <div>
+                                <h3 style="margin-bottom: 5px; color: var(--text-main);">نظام التعرف على الوجه</h3>
+                                <p style="color: var(--text-muted); font-size: 0.9rem; margin:0;">تفعيل الكاميرا والتحقق
+                                    من الهوية قبل فتح الصناديق</p>
+                            </div>
+                        </div>
+
+                        <label class="switch">
+                            <input type="checkbox" id="auth-toggle" onchange="toggleAuthSettings()">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Schedule Cards (Dynamic Loop) -->
+                {% for box_id in boxes %}
+                <div class="card schedule-card">
+                    <div class="card-header">
+                        <span class="card-title">
+                            <span
+                                style="background: var(--{{ 'primary' if box_id % 2 != 0 else 'secondary' }}); width: 8px; height: 8px; border-radius: 50%;"></span>
+                            الصندوق {{ box_id }}
+                        </span>
+                        <button class="icon-btn" style="width: 32px; height: 32px;" onclick="openBox({{ box_id }})"
+                            title="فتح">🔓</button>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">اسم الدواء</label>
+                        <input type="text" id="box{{ box_id }}-name" class="modern-input" placeholder="أدخل الاسم"
+                            value="الجرعة {{ box_id }}">
+                    </div>
+
+                    <!-- إعدادات المخزون -->
+                    <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                        <h4
+                            style="margin-bottom: 10px; font-size: 0.9rem; color: var(--{{ 'accent' if box_id % 2 != 0 else 'secondary' }});">
+                            📊 إدارة المخزون</h4>
+
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <div style="flex: 1;">
+                                <label class="input-label">المخزون الحالي</label>
+                                <input type="number" id="box{{ box_id }}-stock" class="modern-input" min="0" value="0">
+                            </div>
+                            <div style="flex: 1;">
+                                <label class="input-label">الجرعة لكل صرف</label>
+                                <input type="number" id="box{{ box_id }}-dose" class="modern-input" min="1" value="1">
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <div style="flex: 1;">
+                                <label class="input-label">حد التنبيه</label>
+                                <input type="number" id="box{{ box_id }}-threshold" class="modern-input" min="1"
+                                    value="5">
+                            </div>
+                            <div style="flex: 1;">
+                                <label class="input-label">رابط الصيدلية</label>
+                                <input type="text" id="box{{ box_id }}-pharmacy" class="modern-input"
+                                    value="https://kuludonline.com/">
+                            </div>
+                        </div>
+
+                        <!-- تنبيه المخزون -->
+                        <div id="stock-warning-{{ box_id }}"
+                            style="display: none; background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger); padding: 10px; border-radius: 8px; margin-top: 10px; align-items: center; gap: 10px;">
+                            <span style="color: var(--danger); font-size: 0.9rem; font-weight: bold;">⚠️ انتبه: المخزون
+                                منخفض!</span>
+                            <a href="#" id="pharmacy-link-{{ box_id }}" target="_blank"
+                                style="margin-right: auto; background: var(--danger); color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 0.8rem; transition: 0.2s;">شراء
+                                الدواء 🛒</a>
+                        </div>
+                    </div>
+
+                    <div class="day-selector" id="days-box{{ box_id }}">
+                        <div class="day-chip" data-day="0">أحد</div>
+                        <div class="day-chip" data-day="1">إثنين</div>
+                        <div class="day-chip" data-day="2">ثلاثاء</div>
+                        <div class="day-chip" data-day="3">أربعاء</div>
+                        <div class="day-chip" data-day="4">خميس</div>
+                        <div class="day-chip" data-day="5">جمعة</div>
+                        <div class="day-chip" data-day="6">سبت</div>
+                    </div>
+                    <div class="time-row">
+                        <div class="time-input-wrapper"><input type="number" id="box{{ box_id }}-hours" min="0" max="23"
+                                value="08"></div>
+                        <span class="time-separator">:</span>
+                        <div class="time-input-wrapper"><input type="number" id="box{{ box_id }}-minutes" min="0"
+                                max="59" value="00"></div>
+                    </div>
+                    <button onclick="setTimer({{ box_id }})"
+                        class="btn-large btn-{{ 'primary' if box_id % 2 != 0 else 'secondary' }}">⏰ حفظ وتفعيل</button>
+                    <div id="timer-display-{{ box_id }}" class="countdown-display">التالي: <span
+                            id="countdown-{{ box_id }}">--:--:--</span>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Logs -->
+                <div class="card logs-card">
+                    <div class="logs-header">
+                        <span>SYSTEM_LOG</span>
+                        <span>● متصل</span>
+                    </div>
+                    <div class="logs-body" id="terminal-output">
+                        <div class="log-entry"><span class="log-time">00:00:00</span> > النظام جاهز...</div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="footer-branding">
+                    <span>مدرسة عبدالله بن علي المسند الثانوية للبنين</span> • مشروع الروبوت الذكي لتوزيع الأدوية • عمل
+                    الطلاب:
+                    محمد وليد
+                    عمارة & عبد الله
+                    خالد النعيمي <span class="sep">|</span> إشراف: هشام عبد الرحمان سالمي
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Global Init
+        let schedules = {};
+        let timers = {};
+        let timerCountdowns = {};
+        let activeCount = 0;
+        let selectedDays = {};
+        let robotRunning = false;
+
+        // 1. Initialize data structure to avoid undefined errors
+        for (let i = 1; i <= 10; i++) { selectedDays[i] = []; }
+
+        // Day Selection Logic (Global Delegation)
+        document.addEventListener('click', function (e) {
+            if (e.target.classList.contains('day-chip')) {
+                const chip = e.target;
+                const container = chip.parentElement;
+                const boxIdStr = container.id.replace('days-box', '');
+                const boxId = parseInt(boxIdStr);
+                const day = parseInt(chip.dataset.day);
+
+                // Initialize if missing
+                if (!selectedDays[boxId]) selectedDays[boxId] = [];
+
+                if (selectedDays[boxId].includes(day)) {
+                    selectedDays[boxId] = selectedDays[boxId].filter(d => d !== day);
+                    chip.classList.remove('active');
+                } else {
+                    selectedDays[boxId].push(day);
+                    chip.classList.add('active');
+                }
+            }
+        });
+
+        // Clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock-main').textContent =
+                `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+            const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+            document.getElementById('date-display').textContent = `${days[now.getDay()]} ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Logger
+        function addLog(message) {
+            const terminal = document.getElementById('terminal-output');
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="log-time">${timeStr}</span> > ${message}`;
+            terminal.appendChild(entry);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // Status
+        function setStatus(text, color) {
+            document.getElementById('status-text').textContent = text;
+            const dot = document.querySelector('.status-dot');
+            dot.style.background = color;
+            dot.style.boxShadow = `0 0 10px ${color}`;
+        }
+
+        // API Functions
+
+        async function openBox(boxId) {
+            addLog(`جاري فتح الصندوق ${boxId}...`);
+            setStatus('فتح...', 'var(--warning)');
+            try {
+                const res = await fetch('/open_box', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ box: boxId }) });
+                const data = await res.json();
+
+                if (res.ok) {
+                    addLog(data.status);
+                    setStatus('نشط', 'var(--success)');
+
+                    // تحديث المخزون في الواجهة
+                    loadSchedules();
+
+                    // عرض تحذير إذا كان المخزون منخفضاً
+                    if (data.warning_message) {
+                        addLog(`⚠️ ${data.warning_message}`);
+
+                        // إظهار تنبيه بصري (يمكن تحسينه بـ SweetAlert أو Modal)
+                        const confirmBuy = confirm(`${data.warning_message}\nهل تريد شراء الدواء الآن؟`);
+                        if (confirmBuy && data.pharmacy_url) {
+                            window.open(data.pharmacy_url, '_blank');
+                        }
+                    }
+                } else {
+                    addLog(`❌ ${data.status}`);
+                    setStatus('خطأ', 'var(--danger)');
+                    if (data.error === 'low_stock') {
+                        alert("⚠️ المخزون نفد! يرجى إعادة التعبئة.");
+                    }
+                }
+            } catch (e) { addLog('خطأ في الاتصال'); setStatus('خطأ', 'var(--danger)'); }
+        }
+
+        async function setTimer(boxId) {
+            const hours = parseInt(document.getElementById(`box${boxId}-hours`).value);
+            const minutes = parseInt(document.getElementById(`box${boxId}-minutes`).value) || 0;
+            const medicineName = document.getElementById(`box${boxId}-name`).value;
+
+
+
+
+            const stock = parseInt(document.getElementById(`box${boxId}-stock`).value) || 0;
+            const dose = parseInt(document.getElementById(`box${boxId}-dose`).value) || 1;
+            const threshold = parseInt(document.getElementById(`box${boxId}-threshold`).value) || 5;
+            const pharmacy = document.getElementById(`box${boxId}-pharmacy`).value;
+
+            if (selectedDays[boxId].length === 0) { addLog(`❌ اختر يوماً واحداً على الأقل`); return; }
+
+            schedules[boxId] = { hour: hours, minute: minutes, enabled: true };
+
+            try {
+                await fetch('/api/schedules', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        box: boxId,
+                        hour: hours,
+                        minute: minutes,
+                        enabled: true,
+                        days: selectedDays[boxId],
+                        medicine_name: medicineName,
+                        stock_count: stock,
+                        dose_per_dispense: dose,
+                        low_stock_threshold: threshold,
+                        pharmacy_url: pharmacy
+                    })
+                });
+
+                addLog(`✅ تم حفظ جدولة الصندوق ${boxId}`);
+                checkStockStatus(boxId); // فحص المخزون بعد الحفظ
+                calculateNextSchedule(boxId);
+                document.getElementById(`timer-display-${boxId}`).classList.add('active');
+
+                if (timers[boxId]) clearInterval(timers[boxId]);
+
+                // متغير لمنع الاستدعاء المتكرر
+                let isDispensing = false;
+
+                timers[boxId] = setInterval(async () => {
+                    if (timerCountdowns[boxId] > 0 && !isDispensing) {
+                        timerCountdowns[boxId]--;
+                        updateTimerDisplay(boxId);
+
+                        if (timerCountdowns[boxId] <= 0 && !isDispensing) {
+                            // منع الاستدعاء المتكرر
+                            isDispensing = true;
+                            addLog(`🔔 حان موعد الجرعة للصندوق ${boxId}!`);
+
+                            try {
+                                await openBox(boxId);
+                            } catch (e) {
+                                addLog(`❌ خطأ في فتح الصندوق ${boxId}`);
+                            }
+
+                            // انتظار ثم إعادة حساب الموعد التالي
+                            setTimeout(() => {
+                                calculateNextSchedule(boxId);
+                                isDispensing = false;  // إعادة تفعيل المؤقت
+                            }, 3000);
+                        }
+                    }
+                }, 1000);
+            } catch (e) { addLog('خطأ في الحفظ'); }
+        }
+
+        function calculateNextSchedule(boxId) {
+            const now = new Date();
+            const currentDay = now.getDay();
+            const targetHour = schedules[boxId].hour;
+            const targetMinute = schedules[boxId].minute;
+
+            // إذا لم تكن هناك أيام محددة
+            if (!selectedDays[boxId] || selectedDays[boxId].length === 0) {
+                timerCountdowns[boxId] = 0;
+                updateTimerDisplay(boxId);
+                addLog(`⚠️ لا توجد أيام محددة للصندوق ${boxId}`);
+                return;
+            }
+
+            let nextDate = null;
+
+            // البحث عن الموعد التالي (حتى 8 أيام للأمام)
+            for (let i = 0; i <= 7; i++) {
+                const checkDay = (currentDay + i) % 7;
+
+                if (selectedDays[boxId].includes(checkDay)) {
+                    const candidateDate = new Date();
+                    candidateDate.setDate(candidateDate.getDate() + i);
+                    candidateDate.setHours(targetHour, targetMinute, 0, 0);
+
+                    // إذا كان الموعد في المستقبل
+                    if (candidateDate > now) {
+                        nextDate = candidateDate;
+                        break;
+                    }
+                }
+            }
+
+            // إذا لم نجد موعد في الأيام القادمة، نبحث من أول الأسبوع
+            if (!nextDate) {
+                for (let i = 1; i <= 7; i++) {
+                    const checkDay = (currentDay + i) % 7;
+
+                    if (selectedDays[boxId].includes(checkDay)) {
+                        nextDate = new Date();
+                        nextDate.setDate(nextDate.getDate() + i);
+                        nextDate.setHours(targetHour, targetMinute, 0, 0);
+                        break;
+                    }
+                }
+            }
+
+            if (nextDate) {
+                timerCountdowns[boxId] = Math.max(1, Math.floor((nextDate - now) / 1000));
+                const days = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
+                addLog(`⏰ الجرعة التالية للصندوق ${boxId}: يوم ${days[nextDate.getDay()]} الساعة ${String(targetHour).padStart(2, '0')}:${String(targetMinute).padStart(2, '0')}`);
+            } else {
+                timerCountdowns[boxId] = 0;
+                addLog(`⚠️ لم يتم العثور على موعد تالي للصندوق ${boxId}`);
+            }
+
+            updateTimerDisplay(boxId);
+        }
+
+        function updateTimerDisplay(boxId) {
+            const total = timerCountdowns[boxId];
+            const h = Math.floor(total / 3600);
+            const m = Math.floor((total % 3600) / 60);
+            const s = total % 60;
+            document.getElementById(`countdown-${boxId}`).textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        async function loadMode() {
+            addLog('جاري وضع التحميل...');
+            setStatus('تحميل', 'var(--primary)');
+            try {
+                const res = await fetch('/load_mode', { method: 'POST' });
+                const data = await res.json();
+                addLog(data.status);
+                setStatus('نشط', 'var(--success)');
+            } catch (e) { addLog('خطأ'); }
+        }
+
+        async function goZero() {
+            addLog('جاري المعايرة...');
+            setStatus('معايرة', 'var(--accent)');
+            try {
+                const res = await fetch('/go_zero', { method: 'POST' });
+                const data = await res.json();
+                addLog(data.status);
+                setStatus('نشط', 'var(--success)');
+            } catch (e) { addLog('خطأ'); }
+        }
+
+        function emergencyStop() {
+            addLog('🚨 إيقاف طوارئ!');
+            setStatus('متوقف', 'var(--danger)');
+            fetch('/robot/stop', { method: 'POST' });
+        }
+
+        async function toggleRobot() {
+            const btn = document.getElementById('robot-toggle-btn');
+            const text = document.getElementById('robot-toggle-text');
+            const svg = btn.querySelector('svg');
+
+            if (!robotRunning) {
+                try {
+                    addLog('⏳ جاري تشغيل الروبوت...');
+                    const res = await fetch('/robot/start', { method: 'POST' });
+                    const data = await res.json();
+                    if (data.status === 'started') {
+                        robotRunning = true;
+                        addLog('🤖 الروبوت يعمل الآن');
+                        setStatus('الروبوت يعمل', 'var(--warning)');
+                        // Update button to show stop
+                        btn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                        svg.innerHTML = '<rect x="6" y="6" width="12" height="12"></rect>';
+                        svg.setAttribute('stroke', '#ef4444');
+                        text.textContent = 'إيقاف الروبوت';
+                        text.style.color = '#ef4444';
+                    } else {
+                        addLog('❌ فشل تشغيل الروبوت: ' + (data.message || 'غير متصل'));
+                    }
+                } catch (e) { addLog('❌ خطأ في الاتصال بالروبوت'); }
+            } else {
+                try {
+                    await fetch('/robot/stop', { method: 'POST' });
+                    robotRunning = false;
+                    addLog('⏹️ تم إيقاف الروبوت');
+                    setStatus('نشط', 'var(--success)');
+                    // Update button to show start
+                    btn.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                    svg.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+                    svg.setAttribute('stroke', '#10b981');
+                    text.textContent = 'تشغيل الروبوت';
+                    text.style.color = '#10b981';
+                } catch (e) { addLog('❌ خطأ في إيقاف الروبوت'); }
+            }
+        }
+
+        async function loadSchedules() {
+            try {
+                const res = await fetch('/api/schedules');
+                const data = await res.json();
+                let activeCount = 0;
+
+                for (let boxId in data) {
+                    // Populate data always (even if disabled)
+                    if (data[boxId].hour !== null) {
+                        document.getElementById(`box${boxId}-hours`).value = data[boxId].hour;
+                        document.getElementById(`box${boxId}-minutes`).value = data[boxId].minute || 0;
+                    }
+
+                    document.getElementById(`box${boxId}-name`).value = data[boxId].medicine_name || '';
+
+                    // تعبئة بيانات المخزون
+                    document.getElementById(`box${boxId}-stock`).value = data[boxId].stock_count ?? 0;
+                    document.getElementById(`box${boxId}-dose`).value = data[boxId].dose_per_dispense ?? 1;
+                    document.getElementById(`box${boxId}-threshold`).value = data[boxId].low_stock_threshold ?? 5;
+                    document.getElementById(`box${boxId}-pharmacy`).value = data[boxId].pharmacy_url || 'https://kuludonline.com/';
+
+                    // فحص حالة المخزون وتحديث الواجهة دائماً
+                    checkStockStatus(boxId);
+
+                    selectedDays[boxId] = data[boxId].days || [];
+                    const container = document.getElementById(`days-box${boxId}`);
+
+                    // Reset chips first
+                    container.querySelectorAll('.day-chip').forEach(c => c.classList.remove('active'));
+
+                    selectedDays[boxId].forEach(day => {
+                        const chip = container.querySelector(`[data-day="${day}"]`);
+                        if (chip) chip.classList.add('active');
+                    });
+
+                    // If enabled, correct the state
+                    if (data[boxId].enabled && data[boxId].hour !== null) {
+                        activeCount++;
+                        schedules[boxId] = { hour: data[boxId].hour, minute: data[boxId].minute, enabled: true };
+                        calculateNextSchedule(boxId);
+                        document.getElementById(`timer-display-${boxId}`).classList.add('active');
+
+                        // Start timer logic
+                        if (timers[boxId]) clearInterval(timers[boxId]);
+
+                        let isDispensing = false;
+                        timers[boxId] = setInterval(async () => {
+                            if (timerCountdowns[boxId] > 0 && !isDispensing) {
+                                timerCountdowns[boxId]--;
+                                updateTimerDisplay(boxId);
+
+                                if (timerCountdowns[boxId] <= 0 && !isDispensing) {
+                                    isDispensing = true;
+                                    addLog(`🔔 حان موعد الجرعة للصندوق ${boxId}!`);
+                                    try {
+                                        await openBox(boxId);
+                                    } catch (e) {
+                                        addLog(`❌ خطأ في فتح الصندوق ${boxId}`);
+                                    }
+                                    setTimeout(() => {
+                                        calculateNextSchedule(boxId);
+                                        isDispensing = false;
+                                    }, 3000);
+                                }
+                            }
+                        }, 1000);
+                    }
+                }
+
+                document.getElementById('active-count').textContent = activeCount;
+            } catch (e) { addLog('خطأ في تحميل الجداول'); }
+        }
+
+        // Theme
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            if (html.getAttribute('data-theme') === 'light') {
+                html.removeAttribute('data-theme'); icon.textContent = '🌙'; localStorage.setItem('theme', 'dark');
+            } else {
+                html.setAttribute('data-theme', 'light'); icon.textContent = '☀️'; localStorage.setItem('theme', 'light');
+            }
+        }
+
+        (function () {
+            if (localStorage.getItem('theme') === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                document.getElementById('theme-icon').textContent = '☀️';
+            }
+        })();
+
+        loadSchedules();
+        addLog('✅ النظام جاهز');
+
+        // Check Arduino connection on startup
+        async function checkArduinoStatus() {
+            try {
+                const res = await fetch('/robot/status');
+                const data = await res.json();
+                if (data.arduino_connected) {
+                    addLog('🔌 Arduino متصل وجاهز');
+                } else {
+                    addLog('⚠️ Arduino غير متصل - الروبوت لن يتحرك');
+                }
+            } catch (e) {
+                addLog('❌ خطأ في فحص اتصال Arduino');
+            }
+        }
+        checkArduinoStatus();
+
+        // Auto Fullscreen on first interaction
+        function enterFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+            // Remove listener after first use
+            document.removeEventListener('click', enterFullscreen);
+            document.removeEventListener('touchstart', enterFullscreen);
+        }
+
+        // Check if not already in fullscreen
+        if (!document.fullscreenElement) {
+            document.addEventListener('click', enterFullscreen, { once: true });
+            document.addEventListener('touchstart', enterFullscreen, { once: true });
+        }
+
+        // Check Stock Status
+        function checkStockStatus(boxId) {
+            const stock = parseInt(document.getElementById(`box${boxId}-stock`).value) || 0;
+            const threshold = parseInt(document.getElementById(`box${boxId}-threshold`).value) || 5;
+            const pharmacy = document.getElementById(`box${boxId}-pharmacy`).value;
+
+            const warningEl = document.getElementById(`stock-warning-${boxId}`);
+            const linkEl = document.getElementById(`pharmacy-link-${boxId}`);
+
+            if (stock < threshold) {
+                warningEl.style.display = 'flex';
+                linkEl.href = pharmacy || 'https://kuludonline.com/';
+
+                // إضافة تأثير بصري للصندوق نفسه عندما يكون المخزون منخفضا
+                document.getElementById(`box${boxId}-stock`).style.borderColor = 'var(--danger)';
+            } else {
+                warningEl.style.display = 'none';
+                document.getElementById(`box${boxId}-stock`).style.borderColor = 'var(--border-color)';
+            }
+        }
+
+        // Add event listeners to input fields to update warning immediately
+        // Add event listeners to input fields to update warning immediately
+        document.querySelectorAll('input[type="number"], input[type="text"]').forEach(input => {
+            input.addEventListener('change', (e) => {
+                const match = e.target.id.match(/box(\d+)-/);
+                if (match && (e.target.id.includes('stock') || e.target.id.includes('threshold') || e.target.id.includes('pharmacy'))) {
+                    checkStockStatus(parseInt(match[1]));
+                }
+            });
+
+            // Also update on keyup for instant feedback
+            input.addEventListener('keyup', (e) => {
+                const match = e.target.id.match(/box(\d+)-/);
+                if (match && (e.target.id.includes('stock') || e.target.id.includes('threshold'))) {
+                    checkStockStatus(parseInt(match[1]));
+                }
+            });
+        });
+
+        // Initialize tooltips/other
+
+        // Settings Functions
+        async function loadSettings() {
+            try {
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                document.getElementById('auth-toggle').checked = data.auth_enabled;
+            } catch (e) {
+                addLog("خطأ في تحميل الإعدادات");
+            }
+        }
+
+        async function toggleAuthSettings() {
+            const enabled = document.getElementById('auth-toggle').checked;
+            try {
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ auth_enabled: enabled })
+                });
+                if (enabled) {
+                    addLog("✅ تم تفعيل نظام الكاميرا");
+                    setStatus('نظام آمن', 'var(--success)');
+                } else {
+                    addLog("⚠️ تم تعطيل نظام الكاميرا");
+                    setStatus('نظام سريع', 'var(--warning)');
+                }
+            } catch (e) {
+                addLog("خطأ في حفظ الإعدادات");
+                // Revert
+                document.getElementById('auth-toggle').checked = !enabled;
+            }
+        }
+
+        // Init Settings
+        loadSettings();
+    </script>
+</body>
+
+</html>
