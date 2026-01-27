@@ -167,7 +167,8 @@ def handle_settings():
             save_setting("auth_enabled", "1" if data["auth_enabled"] else "0")
         return jsonify({"status": "success", "message": "تم حفظ الإعدادات"})
     else:
-        auth_enabled = get_setting("auth_enabled", "0") == "1"
+        val = str(get_setting("auth_enabled", "0")).strip()
+        auth_enabled = val == "1"
         return jsonify({"auth_enabled": auth_enabled})
 
 
@@ -236,7 +237,9 @@ def verify():
     """التحقق من الوجه (باستخدام آخر نتيجة من الكاميرا مباشرة)."""
     
     # 0. Check Status First
-    auth_enabled = get_setting("auth_enabled", "0") == "1"
+    val = str(get_setting("auth_enabled", "0")).strip()
+    auth_enabled = val == "1"
+    
     if not auth_enabled:
          return jsonify({"verified": True, "reason": "DISABLED", "message": "نظام الوجه غير مفعل"}), 200
 
@@ -285,7 +288,8 @@ def open_box():
         box = int(data.get("box", 0))
         
         # 0. التحقق من تفعيل الكاميرا
-        auth_enabled = get_setting("auth_enabled", "0") == "1"
+        val = str(get_setting("auth_enabled", "0")).strip()
+        auth_enabled = val == "1"
         
         auth_msg = "تم تخطي التحقق (النظام معطل)"
         if auth_enabled:
