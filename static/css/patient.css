@@ -278,6 +278,7 @@ h1 svg {
     padding: 80px;
     text-align: center;
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+    display: none;
 }
 
 .no-schedule-icon {

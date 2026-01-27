@@ -948,6 +948,12 @@ input:checked+.slider:before {
     color: var(--secondary);
 }
 
+.status-dot-dynamic {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
 /* Enrollment link in sidebar */
 .enroll-nav-item {
     display: flex !important;
