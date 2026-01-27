@@ -240,6 +240,20 @@ def api_enroll_face():
 def verify():
     """✨ التحقق البسيط من الوجه - يعتمد فقط على آخر نتيجة من الكاميرا."""
     
+    # 0. التحقق من تفعيل النظام
+    val = str(get_setting("auth_enabled", "0")).strip()
+    auth_enabled = val == "1"
+    
+    if not auth_enabled:
+        # ✅ النظام معطل - السماح المباشر
+        log_event("VERIFY", "SKIPPED", "Authentication disabled", "INFO")
+        robot_state.set(RobotState.VERIFIED)
+        return jsonify({
+            "verified": True,
+            "reason": "AUTH_DISABLED",
+            "message": "✅ تم السماح بالفتح: نظام التحقق معطّل"
+        })
+    
     # 1. فحص إذا كان النظام مشغول
     if robot_state.current in [RobotState.VERIFYING, RobotState.DISPENSING]:
         return jsonify({"verified": False, "reason": "BUSY", "message": "النظام مشغول حالياً"}), 200
