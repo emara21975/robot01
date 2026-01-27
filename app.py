@@ -187,6 +187,11 @@ def enroll_page():
     """صفحة تسجيل وجه مريض جديد."""
     return render_template("enroll.html")
 
+@app.route("/enroll-test")
+def enroll_test_page():
+    """صفحة تشخيص مشاكل التسجيل."""
+    return render_template("enroll_test.html")
+
 @app.route("/api/enroll_face", methods=["POST"])
 def api_enroll_face():
     """API لحفظ وجه جديد من الكاميرا الحالية."""
