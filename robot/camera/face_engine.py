@@ -6,8 +6,9 @@ class FaceEngine:
     def __init__(self, det_size=(640, 640)):
         # Initialize FaceAnalysis (retinaface + arcface)
         # providers=['CPUExecutionProvider'] is safer for Pi unless onnxruntime-gpu is installed
+        # ⚡ PERFORMANCE: Using buffalo_s instead of buffalo_l for Raspberry Pi
         self.app = insightface.app.FaceAnalysis(
-            name="buffalo_l", 
+            name="buffalo_s", 
             providers=["CPUExecutionProvider"]
         )
         self.app.prepare(ctx_id=0, det_size=det_size)

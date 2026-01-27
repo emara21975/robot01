@@ -34,6 +34,9 @@ last_recognized_face = {
     "time": 0
 }
 
+# ⚡ PERFORMANCE: Frame counter for skipping
+frame_count = 0
+
 def get_last_face():
     """Returns the last recognized face and its timestamp."""
     return last_recognized_face
@@ -93,15 +96,24 @@ def gen_frames():
             continue
         
         try:
+            # ⚡ PERFORMANCE: Process every 5th frame only
+            global frame_count
+            frame_count += 1
+            
             # Face Recognition Overlay
             engine = get_face_engine()
             
-            if engine:
-                faces = engine.detect(frame)
+            if engine and (frame_count % 5 == 0):
+                # ⚡ PERFORMANCE: Resize for faster detection
+                small_frame = cv2.resize(frame, (640, 360))
+                faces = engine.detect(small_frame)
                 
-                for face in faces:
-                    # Bounding Box (cast to int)
-                    x1, y1, x2, y2 = map(int, face.bbox)
+                # ⚡ PERFORMANCE: Only process single face to reduce CPU load
+                if len(faces) == 1:
+                    face = faces[0]
+                    
+                    # Bounding Box (scale back to original size)
+                    x1, y1, x2, y2 = [int(v * 2) for v in face.bbox]
                     
 
                     # Recognition
@@ -135,13 +147,24 @@ def gen_frames():
                         (255, 255, 255),
                         2
                     )
+                elif len(faces) > 1:
+                    # Multiple faces - show warning
+                    cv2.putText(
+                        frame,
+                        "Multiple faces detected",
+                        (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.7,
+                        (0, 165, 255),
+                        2
+                    )
 
         except Exception as e:
             # In case of overlay error, print but still yield frame
             print(f"Overlay Error: {e}")
 
-        # Encoding frame to JPEG
-        ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+        # ⚡ PERFORMANCE: Reduced JPEG quality for faster encoding
+        ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
         if not ret:
             continue
             
