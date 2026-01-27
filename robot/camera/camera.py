@@ -12,7 +12,7 @@ except ImportError:
     print("❌ Picamera2 library not found. Camera will be disabled.")
 
 class Camera:
-    def __init__(self, width=640, height=480):
+    def __init__(self, width=1280, height=720):
         self.frame = None
         self.lock = threading.Lock()
         self.running = False
@@ -20,7 +20,7 @@ class Camera:
         
         if _PICAMERA_AVAILABLE:
             try:
-                print("Initializing Picamera2...")
+                print(f"Initializing Picamera2 with resolution {width}x{height}...")
                 self.picam2 = Picamera2()
                 config = self.picam2.create_preview_configuration(
                     main={"format": "BGR888", "size": (width, height)}
