@@ -32,7 +32,7 @@
                         <circle cx="12" cy="7" r="4"></circle>
                     </svg>
                 </a>
-                <a href="/enroll" class="nav-item" title="تسجيل وجوه جديدة" style="display: flex !important;">
+                <a href="/enroll" class="nav-item enroll-nav-item" title="تسجيل وجوه جديدة">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                         <circle cx="12" cy="7" r="4"></circle>
@@ -72,7 +72,7 @@
                             <line x1="9" y1="14" x2="15" y2="14"></line>
                         </svg>
                     </a>
-                    <button class="icon-btn" onclick="toggleRobot()" id="robot-toggle-btn" title="تشغيل/إيقاف الروبوت">
+                    <button class="icon-btn" onclick="toggleRobot()" id="robot-toggle-header-btn" title="تشغيل/إيقاف الروبوت">
                         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <path
@@ -96,19 +96,15 @@
                     <div class="status-content">
                         <div class="status-info">
                             <h2 id="clock-main">00:00:00</h2>
-                            <p style="color: var(--text-muted); margin-bottom: 20px;" id="date-display">التاريخ</p>
-                            <div style="display: flex; gap: 15px;">
-                                <div
-                                    style="background: rgba(255,255,255,0.05); padding: 10px 15px; border-radius: 12px;">
-                                    <span
-                                        style="display:block; font-size: 0.75rem; color: var(--text-muted);">الجداول</span>
-                                    <span style="font-weight: 700; color: var(--success);" id="active-count">0</span>
+                            <p class="status-date" id="date-display">التاريخ</p>
+                            <div class="status-metrics">
+                                <div class="status-metric-box">
+                                    <span class="status-metric-label">الجداول</span>
+                                    <span class="status-metric-value success" id="active-count">0</span>
                                 </div>
-                                <div
-                                    style="background: rgba(255,255,255,0.05); padding: 10px 15px; border-radius: 12px;">
-                                    <span
-                                        style="display:block; font-size: 0.75rem; color: var(--text-muted);">الحالة</span>
-                                    <span style="font-weight: 700; color: var(--primary);">متصل</span>
+                                <div class="status-metric-box">
+                                    <span class="status-metric-label">الحالة</span>
+                                    <span class="status-metric-value primary">متصل</span>
                                 </div>
                             </div>
                         </div>
@@ -139,36 +135,34 @@
                         </svg>
                         <span>تحميل الدواء صندوق 1</span>
                     </div>
-                    <div class="action-btn" id="robot-toggle-btn" onclick="toggleRobot()"
-                        style="border-color: rgba(16, 185, 129, 0.3);">
+                    <div class="action-btn robot-toggle-action" id="robot-toggle-btn" onclick="toggleRobot()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
                             <polygon points="5 3 19 12 5 21 5 3"></polygon>
                         </svg>
-                        <span id="robot-toggle-text" style="color: #10b981;">تشغيل الروبوت</span>
+                        <span class="robot-toggle-text" id="robot-toggle-text">تشغيل الروبوت</span>
                     </div>
-                    <div class="action-btn" style="border-color: rgba(239, 68, 68, 0.3);" onclick="emergencyStop()">
+                    <div class="action-btn emergency-action" onclick="emergencyStop()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                         </svg>
-                        <span style="color: #ef4444;">طوارئ</span>
+                        <span class="emergency-text">طوارئ</span>
                     </div>
                 </div>
 
                 <!-- Settings Card -->
-                <div class="card settings-card" style="grid-column: span 12;">
+                <div class="card settings-card settings-full-width">
                     <div class="card-header">
                         <div class="card-title">
                             <span>⚙️ إعدادات النظام</span>
                         </div>
                     </div>
 
-                    <div
-                        style="display: flex; align-items: center; justify-content: space-between; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid var(--border-color);">
-                        <div style="display:flex; gap: 15px; align-items:center;">
-                            <div style="font-size: 2rem;">📸</div>
+                    <div class="settings-section">
+                        <div class="settings-content">
+                            <div class="settings-icon">📸</div>
                             <div>
-                                <h3 style="margin-bottom: 5px; color: var(--text-main);">نظام التعرف على الوجه</h3>
-                                <p style="color: var(--text-muted); font-size: 0.9rem; margin:0;">تفعيل الكاميرا والتحقق
+                                <h3 class="settings-title">نظام التعرف على الوجه</h3>
+                                <p class="settings-description">تفعيل الكاميرا والتحقق
                                     من الهوية قبل فتح الصناديق</p>
                             </div>
                         </div>
@@ -180,18 +174,16 @@
                     </div>
 
                     <!-- Enrollment Link -->
-                    <div
-                        style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                        <div style="display:flex; gap: 15px; align-items:center;">
-                            <div style="font-size: 2rem;">👤</div>
+                    <div class="enrollment-section">
+                        <div class="settings-content">
+                            <div class="settings-icon">👤</div>
                             <div>
-                                <h3 style="margin-bottom: 5px; color: var(--text-main);">تسجيل وجوه جديدة</h3>
-                                <p style="color: var(--text-muted); font-size: 0.9rem; margin:0;">إضافة مرضى جدد إلى
+                                <h3 class="settings-title">تسجيل وجوه جديدة</h3>
+                                <p class="settings-description">إضافة مرضى جدد إلى
                                     قاعدة البيانات</p>
                             </div>
                         </div>
-                        <a href="/enroll" class="action-btn"
-                            style="background: var(--primary); color: white; border: none; text-decoration: none;">
+                        <a href="/enroll" class="action-btn enrollment-link-btn">
                             <span>فتح صفحة التسجيل ↗</span>
                         </a>
                     </div>
@@ -207,7 +199,7 @@
                                 style="width: 8px; height: 8px; border-radius: 50%;"></span>
                             الصندوق {{ box_id }}
                         </span>
-                        <button class="icon-btn" style="width: 32px; height: 32px;" onclick="openBox('{{ box_id }}')"
+                        <button class="icon-btn box-open-btn" onclick="openBox('{{ box_id }}')"
                             title="فتح">🔓</button>
                     </div>
 
@@ -218,42 +210,39 @@
                     </div>
 
                     <!-- إعدادات المخزون -->
-                    <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                        <h4 class="{% if box_id % 2 != 0 %}header-accent-primary{% else %}header-accent-secondary{% endif %}"
-                            style="margin-bottom: 10px; font-size: 0.9rem;">
+                    <div class="stock-settings">
+                        <h4 class="stock-header {% if box_id % 2 != 0 %}header-accent-primary{% else %}header-accent-secondary{% endif %}">
                             📊 إدارة المخزون</h4>
 
-                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                            <div style="flex: 1;">
-                                <label class="input-label">المخزون الحالي</label>
-                                <input type="number" id="box{{ box_id }}-stock" class="modern-input" min="0" value="0">
+                        <div class="stock-row">
+                            <div class="stock-field">
+                                <label class="input-label" for="box{{ box_id }}-stock">المخزون الحالي</label>
+                                <input type="number" id="box{{ box_id }}-stock" class="modern-input" min="0" value="0" aria-label="المخزون الحالي للصندوق {{ box_id }}">
                             </div>
-                            <div style="flex: 1;">
-                                <label class="input-label">الجرعة لكل صرف</label>
-                                <input type="number" id="box{{ box_id }}-dose" class="modern-input" min="1" value="1">
+                            <div class="stock-field">
+                                <label class="input-label" for="box{{ box_id }}-dose">الجرعة لكل صرف</label>
+                                <input type="number" id="box{{ box_id }}-dose" class="modern-input" min="1" value="1" aria-label="الجرعة لكل صرف للصندوق {{ box_id }}">
                             </div>
                         </div>
 
-                        <div style="display: flex; gap: 10px;">
-                            <div style="flex: 1;">
-                                <label class="input-label">حد التنبيه</label>
+                        <div class="stock-row last">
+                            <div class="stock-field">
+                                <label class="input-label" for="box{{ box_id }}-threshold">حد التنبيه</label>
                                 <input type="number" id="box{{ box_id }}-threshold" class="modern-input" min="1"
-                                    value="5">
+                                    value="5" aria-label="حد التنبيه للصندوق {{ box_id }}">
                             </div>
-                            <div style="flex: 1;">
-                                <label class="input-label">رابط الصيدلية</label>
+                            <div class="stock-field">
+                                <label class="input-label" for="box{{ box_id }}-pharmacy">رابط الصيدلية</label>
                                 <input type="text" id="box{{ box_id }}-pharmacy" class="modern-input"
-                                    value="https://kuludonline.com/">
+                                    value="https://kuludonline.com/" aria-label="رابط الصيدلية للصندوق {{ box_id }}">
                             </div>
                         </div>
 
                         <!-- تنبيه المخزون -->
-                        <div id="stock-warning-{{ box_id }}"
-                            style="display: none; background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger); padding: 10px; border-radius: 8px; margin-top: 10px; align-items: center; gap: 10px;">
-                            <span style="color: var(--danger); font-size: 0.9rem; font-weight: bold;">⚠️ انتبه: المخزون
+                        <div id="stock-warning-{{ box_id }}" class="stock-warning">
+                            <span class="stock-warning-text">⚠️ انتبه: المخزون
                                 منخفض!</span>
-                            <a href="#" id="pharmacy-link-{{ box_id }}" target="_blank"
-                                style="margin-right: auto; background: var(--danger); color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 0.8rem; transition: 0.2s;">شراء
+                            <a href="#" id="pharmacy-link-{{ box_id }}" target="_blank" class="stock-pharmacy-link">شراء
                                 الدواء 🛒</a>
                         </div>
                     </div>

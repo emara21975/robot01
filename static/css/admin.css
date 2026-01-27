@@ -945,3 +945,175 @@ input:checked+.slider:before {
 .header-accent-secondary {
     color: var(--secondary);
 }
+
+/* Enrollment link in sidebar */
+.enroll-nav-item {
+    display: flex !important;
+}
+
+/* Status display */
+.status-date {
+    color: var(--text-muted);
+    margin-bottom: 20px;
+}
+
+.status-metrics {
+    display: flex;
+    gap: 15px;
+}
+
+.status-metric-box {
+    background: rgba(255,255,255,0.05);
+    padding: 10px 15px;
+    border-radius: 12px;
+}
+
+.status-metric-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.status-metric-value {
+    font-weight: 700;
+}
+
+.status-metric-value.success {
+    color: var(--success);
+}
+
+.status-metric-value.primary {
+    color: var(--primary);
+}
+
+/* Settings card */
+.settings-full-width {
+    grid-column: span 12;
+}
+
+.settings-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.settings-content {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.settings-icon {
+    font-size: 2rem;
+}
+
+.settings-title {
+    margin-bottom: 5px;
+    color: var(--text-main);
+}
+
+.settings-description {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.enrollment-section {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.enrollment-link-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    text-decoration: none;
+}
+
+/* Box open button */
+.box-open-btn {
+    width: 32px;
+    height: 32px;
+}
+
+/* Stock settings */
+.stock-settings {
+    background: rgba(0,0,0,0.2);
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.stock-header {
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}
+
+.stock-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.stock-row.last {
+    margin-bottom: 0;
+}
+
+.stock-field {
+    flex: 1;
+}
+
+.stock-warning {
+    display: none;
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid var(--danger);
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 10px;
+    align-items: center;
+    gap: 10px;
+}
+
+.stock-warning-text {
+    color: var(--danger);
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.stock-pharmacy-link {
+    margin-right: auto;
+    background: var(--danger);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.8rem;
+    transition: 0.2s;
+}
+
+/* Robot toggle in actions */
+.robot-toggle-action {
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.robot-toggle-text {
+    color: #10b981;
+}
+
+.emergency-action {
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.emergency-text {
+    color: #ef4444;
+}
