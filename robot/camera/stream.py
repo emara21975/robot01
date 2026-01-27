@@ -21,7 +21,40 @@ def get_placeholder_frame(text="NO CAMERA SIGNAL"):
                 
     return blank_image
 
+
+# Initialize Face Engine (Lazy Load to prevent startup delay)
+face_engine = None
+faces_db = {}
+last_db_refresh = 0
+
+def get_face_engine():
+    global face_engine, faces_db, last_db_refresh
+    if face_engine is None:
+        try:
+            print("🚀 Loading Face Engine...")
+            from robot.camera.face_engine import FaceEngine
+            from robot.camera.face_db import load_faces
+            face_engine = FaceEngine()
+            faces_db = load_faces()
+            print("✅ Face Engine Loaded.")
+        except Exception as e:
+            print(f"❌ Error loading FaceEngine: {e}")
+            face_engine = False # valid but disabled
+    
+    # Reload DB occasionally (e.g. every 10 seconds)
+    import time
+    if time.time() - last_db_refresh > 10:
+        if face_engine:
+             from robot.camera.face_db import load_faces
+             faces_db = load_faces()
+             last_db_refresh = time.time()
+             
+    return face_engine
+
 def gen_frames():
+    import time
+    from robot.camera.face_db import match_face
+    
     while True:
         if camera:
             frame = camera.get_frame()
@@ -33,34 +66,52 @@ def gen_frames():
             frame = get_placeholder_frame("Wait for Camera...")
             
             # Encode
-            ret, buffer = cv2.imencode('.jpg', frame)
+            ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
             if ret:
                 frame_bytes = buffer.tobytes()
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
             
-            # Slow down loop if no camera
-            import time
             time.sleep(1.0)
             continue
         
         try:
-            # Face Detection Overlay (Lightweight)
-            # Use gray for detection to be faster
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-
-            # Draw rectangles
-            for (x, y, w, h) in faces:
-                cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-
-            # Draw Status
-            status_text = "Status: Monitoring"
-            if len(faces) > 0:
-                status_text = f"Status: Face Detected ({len(faces)})"
+            # Face Recognition Overlay
+            engine = get_face_engine()
             
-            cv2.putText(frame, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-            
+            if engine:
+                faces = engine.detect(frame)
+                
+                for face in faces:
+                    # Bounding Box (cast to int)
+                    x1, y1, x2, y2 = map(int, face.bbox)
+                    
+                    # Recognition
+                    name, score = match_face(face.embedding, faces_db, threshold=0.5)
+                    
+                    # Color: Green for known, Red for Unknown
+                    color = (0, 255, 0) if name != "Unknown" else (0, 0, 255)
+                    
+                    # Draw Box
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+                    
+                    # Draw Name Label
+                    label = f"{name} ({score:.2f})"
+                    
+                    # Background for text
+                    cv2.rectangle(frame, (x1, y1 - 30), (x2, y1), color, -1)
+                    
+                    # Text
+                    cv2.putText(
+                        frame,
+                        label,
+                        (x1 + 5, y1 - 7),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        (255, 255, 255),
+                        2
+                    )
+
         except Exception as e:
             # In case of overlay error, print but still yield frame
             print(f"Overlay Error: {e}")
