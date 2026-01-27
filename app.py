@@ -172,12 +172,14 @@ def handle_settings():
 
 
 # استيراد وحدة التعرّف على الوجه
+# استيراد وحدة التعرّف على الوجه
 try:
     from face_auth import check_face_auth, verify_with_timeout
-except ImportError:
-    print("⚠️ نظام التعرف على الوجه غير مفعل (المكتبات ناقصة)")
-    def check_face_auth(): return True, "نظام الوجه معطل"
-    def verify_with_timeout(): return {"verified": True, "reason": "DISABLED", "message": "نظام الوجه معطل"}
+except Exception as e:
+    print(f"⚠️ نظام التعرف على الوجه معطل بسبب خطأ: {e}")
+    # Fallback functions
+    def check_face_auth(frame=None): return True, f"نظام الوجه معطل: {e}"
+    def verify_with_timeout(): return {"verified": True, "reason": "DISABLED", "message": f"نظام الوجه معطل: {e}"}
 
 
 # ========== Face Enrollment ==========
@@ -239,6 +241,11 @@ def api_enroll_face():
 @app.route("/verify-face")
 def verify():
     """التحقق من الوجه (مع مهلة زمنية وآلة الحالة)."""
+    # 0. Check if Auth is Enabled Globally
+    auth_enabled = get_setting("auth_enabled", "0") == "1"
+    if not auth_enabled:
+         return jsonify({"verified": True, "reason": "DISABLED", "message": "نظام الوجه غير مفعل من الإعدادات"}), 200
+
     # 1. Check State
     if robot_state.current in [RobotState.VERIFYING, RobotState.DISPENSING]:
         return jsonify({"verified": False, "reason": "BUSY", "message": "النظام مشغول حالياً"}), 200
@@ -247,6 +254,7 @@ def verify():
     robot_state.set(RobotState.VERIFYING)
 
     try:
+        # Pass the auth setting context if needed, but we already checked it.
         result = verify_with_timeout()
         
         # Fail-safe
