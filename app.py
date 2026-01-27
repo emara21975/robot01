@@ -179,6 +179,63 @@ except ImportError:
     def check_face_auth(): return True, "نظام الوجه معطل"
     def verify_with_timeout(): return {"verified": True, "reason": "DISABLED", "message": "نظام الوجه معطل"}
 
+
+# ========== Face Enrollment ==========
+
+@app.route("/enroll")
+def enroll_page():
+    """صفحة تسجيل وجه مريض جديد."""
+    return render_template("enroll.html")
+
+@app.route("/api/enroll_face", methods=["POST"])
+def api_enroll_face():
+    """API لحفظ وجه جديد من الكاميرا الحالية."""
+    try:
+        from robot.camera.stream import get_face_engine, force_reload_faces
+        from robot.camera.camera import camera
+        from robot.camera.face_db import save_face
+        
+        data = request.get_json()
+        name = data.get("name")
+        
+        if not name:
+            return jsonify({"status": "error", "message": "الاسم مطلوب"}), 400
+            
+        if not camera:
+            return jsonify({"status": "error", "message": "الكاميرا غير متصلة"}), 500
+            
+        # Get frame
+        frame = camera.get_frame()
+        if frame is None:
+             return jsonify({"status": "error", "message": "فشل التقاط صورة من الكاميرا"}), 500
+             
+        # Detect Face
+        engine = get_face_engine()
+        if not engine:
+             return jsonify({"status": "error", "message": "محرك الوجوه غير جاهز"}), 500
+             
+        faces = engine.detect(frame)
+        
+        if len(faces) == 0:
+             return jsonify({"status": "error", "message": "لم يتم العثور على وجه! تأكد من الإضاءة وواجه الكاميرا."}), 400
+             
+        if len(faces) > 1:
+             return jsonify({"status": "error", "message": "تم كشف أكثر من وجه. يرجى أن يكون شخص واحد فقط أمام الكاميرا."}), 400
+             
+        # Save Face
+        face = faces[0]
+        save_face(name, face.embedding)
+        
+        # Trigger DB Refresh
+        force_reload_faces()
+        
+        return jsonify({"status": "success", "message": f"تم تسجيل الوجه بنجاح: {name}"})
+        
+    except Exception as e:
+        print(f"Enrollment Error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route("/verify-face")
 def verify():
     """التحقق من الوجه (مع مهلة زمنية وآلة الحالة)."""

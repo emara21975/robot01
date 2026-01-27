@@ -51,6 +51,12 @@ def get_face_engine():
              
     return face_engine
 
+def force_reload_faces():
+    """Force reloading the face database on the next frame."""
+    global last_db_refresh
+    last_db_refresh = 0
+    print("🔄 Face DB reload requested.")
+
 def gen_frames():
     import time
     from robot.camera.face_db import match_face
