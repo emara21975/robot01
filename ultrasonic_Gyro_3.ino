@@ -32,7 +32,7 @@ int PIN_GATE_B = 12;
 
 // Dispenser Configuration
 const int SLOT_A_ANGLE = 30;    // Calibrate this!
-const int SLOT_B_ANGLE = 210;   // Calibrate this! (30 + 180)
+const int SLOT_B_ANGLE = 210;   // Calibrate this!
 const int GATE_OPEN_ANGLE = 90;
 const int GATE_CLOSE_ANGLE = 0;
 
@@ -46,6 +46,7 @@ bool isReversing = false;
 enum DispenseStage { D_ROTATE, D_WAIT_ROTATE, D_OPEN, D_WAIT_USE, D_CLOSE, D_FINISH };
 DispenseStage dispStage = D_ROTATE;
 unsigned long dispTimer = 0;
+unsigned long dispenseStartMs = 0; // Watchdog Timer
 Servo* activeGateServo = NULL;
 int targetCarouselAngle = 0;
 
@@ -200,7 +201,32 @@ void turnInPlace() {
   analogWrite(ENB, turnSpeed);
 }
 
-// ============ Dispensing Logic ============
+// ============ Dispensing Logic (Safe Version) ============
+
+// Safety Helper: Close all gates immediately
+void closeAllGates() {
+  if(!gateServoA.attached()) gateServoA.attach(PIN_GATE_A);
+  if(!gateServoB.attached()) gateServoB.attach(PIN_GATE_B);
+  
+  gateServoA.write(GATE_CLOSE_ANGLE);
+  gateServoB.write(GATE_CLOSE_ANGLE);
+}
+
+// Safety Helper: Abort operation and reset state
+void abortDispense() {
+  closeAllGates();
+  servoCarousel.write(SLOT_A_ANGLE); // Reset carousel to safe known angle
+  
+  state = IDLE;
+  dispStage = D_ROTATE;
+  
+  // Power down gates after abort
+  delay(200);
+  gateServoA.detach();
+  gateServoB.detach();
+  
+  Serial.println("ERR:DISPENSE_ABORTED");
+}
 
 void startDispense(char slot) {
   if (state != IDLE) {
@@ -208,8 +234,13 @@ void startDispense(char slot) {
     return;
   }
   
+  // 1. Safety Close First
+  closeAllGates(); 
+  
   state = DISPENSING;
   dispStage = D_ROTATE;
+  dispTimer = millis();
+  dispenseStartMs = millis(); // Start Watchdog
   
   if (slot == 'A') {
     targetCarouselAngle = SLOT_A_ANGLE;
@@ -226,6 +257,13 @@ void startDispense(char slot) {
 void updateDispenser() {
   unsigned long now = millis();
   
+  // ⚠️ 4. Watchdog Timer (8 Seconds Timeout)
+  if (now - dispenseStartMs > 8000) {
+      Serial.println("ERR:WATCHDOG_TIMEOUT");
+      abortDispense();
+      return;
+  }
+  
   switch(dispStage) {
     case D_ROTATE:
       servoCarousel.write(targetCarouselAngle);
@@ -240,6 +278,12 @@ void updateDispenser() {
       break;
       
     case D_OPEN:
+      // Ensure specific servo is attached before move
+      if (activeGateServo && !activeGateServo->attached()) {
+          if (activeGateServo == &gateServoA) gateServoA.attach(PIN_GATE_A);
+          else if (activeGateServo == &gateServoB) gateServoB.attach(PIN_GATE_B);
+      }
+      
       if(activeGateServo) activeGateServo->write(GATE_OPEN_ANGLE);
       dispTimer = now;
       dispStage = D_WAIT_USE;
@@ -253,7 +297,10 @@ void updateDispenser() {
       
     case D_CLOSE:
       if(activeGateServo) activeGateServo->write(GATE_CLOSE_ANGLE);
-      servoCarousel.write(SLOT_A_ANGLE); // Home position
+      
+      // ⚠️ 3. REMOVED Auto-Home to prevent risk
+      // servoCarousel.write(SLOT_A_ANGLE); 
+      
       dispTimer = now;
       dispStage = D_FINISH;
       break;
@@ -261,6 +308,11 @@ void updateDispenser() {
     case D_FINISH:
       if (now - dispTimer > 500) {
         state = IDLE;
+        
+        // ⚠️ 2. Detach to save power/heat
+        gateServoA.detach();
+        gateServoB.detach();
+        
         Serial.println("STATUS:DISPENSE_COMPLETE");
       }
       break;
@@ -292,6 +344,11 @@ void setup() {
   servoCarousel.write(SLOT_A_ANGLE);
   gateServoA.write(GATE_CLOSE_ANGLE);
   gateServoB.write(GATE_CLOSE_ANGLE);
+  
+  // Stabilize and Detach Gates
+  delay(1000);
+  gateServoA.detach();
+  gateServoB.detach();
 
   Wire.begin();
   
@@ -322,6 +379,9 @@ void checkSerialCommands() {
       Serial.println("OK:MOVING_FWD");
 
     } else if (command == "STOP") {
+      // ⚠️ 1. Safety Halt
+      abortDispense();
+      
       state = IDLE;
       stopRobot();
       Serial.println("OK:STOPPED");
@@ -378,6 +438,9 @@ void loop() {
 
     // Safety Stop
     if (distance > 0 && distance <= obstacleDistance) {
+      // ⚠️ 1. Safety Halt on Obstacle
+      abortDispense();
+      
       state = IDLE;
       stopRobot();
       currentSpeed = 0;
