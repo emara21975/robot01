@@ -75,6 +75,8 @@ def gen_frames():
     import time
     from robot.camera.face_db import match_face
     
+    last_rec_time = 0
+    
     while True:
         if camera:
             frame = camera.get_frame()
@@ -86,33 +88,35 @@ def gen_frames():
             frame = get_placeholder_frame("Wait for Camera...")
             
             # Encode
-            ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+            ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
             if ret:
                 frame_bytes = buffer.tobytes()
-                yield (b'--frame\r\n'
+                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
             
             time.sleep(1.0)
             continue
         
         try:
-            # ⚡ PERFORMANCE: Process every 5th frame only
-            global frame_count
-            frame_count += 1
+            # ⚡ PERFORMANCE: Time-based throttling for Face Recognition (Every 0.5s)
             
             # Face Recognition Overlay
             engine = get_face_engine()
+            current_time = time.time()
             
-            if engine and (frame_count % 5 == 0):
+            if engine and (current_time - last_rec_time > 0.5):
+                last_rec_time = current_time
+                
                 # ⚡ PERFORMANCE: Resize for faster detection
-                small_frame = cv2.resize(frame, (640, 360))
+                small_frame = cv2.resize(frame, (320, 240)) # Even smaller for detection speed
                 faces = engine.detect(small_frame)
                 
                 # ⚡ PERFORMANCE: Only process single face to reduce CPU load
                 if len(faces) == 1:
                     face = faces[0]
                     
-                    # Bounding Box (scale back to original size)
+                    # Bounding Box (scale back to original size 640/320 = 2)
+                    # NOTE: If we changed camera res to 640x480, and resize to 320x240, scale is 2.
                     x1, y1, x2, y2 = [int(v * 2) for v in face.bbox]
                     
 
@@ -163,14 +167,17 @@ def gen_frames():
             # In case of overlay error, print but still yield frame
             print(f"Overlay Error: {e}")
 
-        # ⚡ PERFORMANCE: Reduced JPEG quality for faster encoding
-        ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+        # ⚡ PERFORMANCE: Reduced JPEG quality (60) for faster encoding
+        ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
         if not ret:
             continue
             
         frame_bytes = buffer.tobytes()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+               
+        # ⚡ PERFORMANCE: FPS Limit (~20 FPS)
+        time.sleep(0.05)
 
 def video_stream():
     """Returns a Flask Response with the video stream"""

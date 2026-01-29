@@ -15,7 +15,7 @@ except ImportError:
     print("❌ Picamera2 library not found. Camera will be disabled.")
 
 class Camera:
-    def __init__(self, width=1280, height=720):
+    def __init__(self, width=640, height=480):
         self.frame = None
         self.lock = threading.Lock()
         self.running = False

@@ -697,49 +697,49 @@
                     align-items: center;
                     justify-content: center;
                 }
-                
+
                 .camera-feed {
                     width: 100%;
                     height: 100%;
                     object-fit: cover;
                     display: block;
                 }
-                
+
                 .camera-placeholder {
                     text-align: center;
                     color: var(--text-muted);
                     display: none;
                 }
-                
+
                 .camera-placeholder-icon {
                     font-size: 2.5rem;
                     margin-bottom: 5px;
                 }
-                
+
                 .camera-placeholder-text {
                     margin: 0;
                     font-size: 0.9rem;
                 }
-                
+
                 .camera-status-badge {
                     position: absolute;
                     bottom: 8px;
                     right: 8px;
-                    background: rgba(0,0,0,0.6);
+                    background: rgba(0, 0, 0, 0.6);
                     color: white;
                     padding: 4px 8px;
                     border-radius: 8px;
                     font-size: 0.7rem;
                     display: block;
                 }
-                
+
                 .camera-instruction {
                     margin-top: 10px;
                     color: var(--text-muted);
                     text-align: center;
                     display: none;
                 }
-                
+
                 .camera-controls {
                     text-align: center;
                     margin-top: 15px;
@@ -747,7 +747,7 @@
                     gap: 10px;
                     justify-content: center;
                 }
-                
+
                 .verify-btn {
                     background: var(--primary);
                     color: white;
@@ -759,7 +759,7 @@
                     flex: 1;
                     max-width: 200px;
                 }
-                
+
                 .enroll-btn {
                     background: var(--success);
                     color: white;
@@ -775,7 +775,7 @@
                     flex: 1;
                     max-width: 200px;
                 }
-                
+
                 .face-status {
                     text-align: center;
                     margin-top: 10px;
@@ -864,21 +864,25 @@
                 <div class="card-icon">${icon}</div>
                 <div class="card-title">${schedules[boxId].name}</div>
               </div>
-              <div class="schedule-time">
-                <div class="time">${String(schedules[boxId].hour).padStart(2, '0')}:${String(schedules[boxId].minute).padStart(2, '0')}</div>
-                <div class="label">موعد الجرعة</div>
-              </div>
               
-              <!-- Action Buttons -->
-              <div class="actions" style="margin-top: 20px; text-align: center;">
-                  <!-- Manual Open (Small/Secondary) -->
-                  <div id="wrapper-open-${boxId}">
+              <!-- Time + Emergency Wrapper -->
+              <div style="display: flex; gap: 10px; align-items: stretch; margin-bottom: 20px;">
+                  <div class="schedule-time" style="flex: 1; margin-bottom: 0;">
+                    <div class="time">${String(schedules[boxId].hour).padStart(2, '0')}:${String(schedules[boxId].minute).padStart(2, '0')}</div>
+                    <div class="label">موعد الجرعة</div>
+                  </div>
+
+                  <!-- Manual Open (Moved Here - Left of Time) -->
+                   <div id="wrapper-open-${boxId}" style="display: flex; align-items: center;">
                     <button onclick="openBox(${boxId})" class="btn-large action-btn" id="btn-open-${boxId}" 
-                            style="background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 10px; font-size: 0.9rem; margin-bottom: 10px; width: auto; display: inline-flex;">
-                        <span>🚨 فتح للطوارئ</span>
+                            style="background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 0 20px; font-size: 0.9rem; height: 100%; width: auto; display: inline-flex; align-items: center; justify-content: center; border-radius: 16px;">
+                        <span>🚨 فتح<br>للطوارئ</span>
                     </button>
                   </div>
-                  
+              </div>
+              
+              <!-- Action Buttons (Only Confirm Remains) -->
+              <div class="actions" style="margin-top: 0; text-align: center;">
                   <!-- Confirm Taken (Huge/Primary) - Hidden by default -->
                   <button onclick="confirmTaken(${boxId})" class="btn-large btn-primary action-btn pulse-anim" id="btn-confirm-${boxId}" 
                           style="display: none; background: var(--success); font-size: 1.5rem; padding: 25px; width: 100%; border-radius: 20px; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);">
@@ -1147,7 +1151,7 @@
                     if (res.status === 403) {
                         // Auth Failed - رفض بسبب عدم التحقق
                         const errorMsg = data.status || "رفض الصرف: يرجى التحقق من الوجه أولاً";
-                        
+
                         // رسالة واضحة للمستخدم
                         alert(`❌ ${errorMsg}\n\n💡 الحل:\n1. اضغط زر "📸 تحقق من الوجه" أعلى الصفحة\n2. انتظر ظهور رسالة "✅ أهلاً [اسمك]"\n3. اضغط "فتح للطوارئ" مرة أخرى`);
 
@@ -1216,11 +1220,11 @@
         function verifyFace() {
             const statusDiv = document.getElementById("face-status");
             const btn = event.target;
-            
+
             // تعطيل الزر مؤقتاً
             btn.disabled = true;
             btn.innerHTML = "⏳ جاري التحقق...";
-            
+
             if (statusDiv) statusDiv.innerHTML = "<span style='color: var(--warning)'>⏳ جاري التحقق من الوجه...</span>";
 
             fetch("/verify-face")
@@ -1235,13 +1239,13 @@
                         // تأثير بصري
                         statusDiv.style.animation = "pulse-green 1s";
                         setTimeout(() => statusDiv.style.animation = "", 1000);
-                        
+
                     } else {
                         // ❌ فشل التحقق
                         let icon = "❌";
                         if (data.reason === "NO_FACE") icon = "👤";
                         else if (data.reason === "UNKNOWN_FACE") icon = "⚠️";
-                        
+
                         const msg = `${icon} ${data.message}`;
                         if (statusDiv) {
                             statusDiv.innerHTML = `<span style="color: var(--danger); font-size: 1.1rem;">${msg}</span>`;
