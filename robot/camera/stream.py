@@ -104,7 +104,7 @@ def gen_frames():
             engine = get_face_engine()
             current_time = time.time()
             
-            if engine and (current_time - last_rec_time > 0.5):
+            if engine and (current_time - last_rec_time > 1.0):
                 last_rec_time = current_time
                 
                 # ⚡ PERFORMANCE: Resize for faster detection
