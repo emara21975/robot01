@@ -155,31 +155,34 @@ def move_servo(pwm, target_angle):
         smooth_move(pwm, start_angle, target_angle, steps=20)
 
 def load_medicine():
-    move_servo(pwm_carousel, LOADING_ANGLE)
-    time.sleep(0.7)
+    """TODO: Implement LOAD command in Arduino if needed."""
+    print("TODO: Send LOAD command to Arduino")
+    # move_servo(pwm_carousel, LOADING_ANGLE) # Legacy
 
 def go_home_zero():
-    move_servo(pwm_carousel, ZERO_ANGLE)
-    time.sleep(0.6)
+    """TODO: Implement ZERO command in Arduino."""
+    print("TODO: Send ZERO command to Arduino")
+    # move_servo(pwm_carousel, ZERO_ANGLE) # Legacy
 
 def dispense_dose(box_id):
-    if box_id not in BOX_CONFIG: return False, f"رقم الصندوق {box_id} غير صحيح"
-    gate_pwm = gate_pwms.get(box_id) if HAS_GPIO else None
-    target_angle = BOX_CONFIG[box_id]['angle']
+    """
+    Sends dispense command to Arduino.
+    Box 1 -> DISPENSE A
+    Box 2 -> DISPENSE B
+    """
+    if not connect_arduino(): return False, "Arduino غير متصل"
     
-    if not HAS_GPIO: print(f"[محاكاة] تدوير {box_id}")
-    move_servo(pwm_carousel, target_angle)
-    time.sleep(0.6)
+    cmd = ""
+    if box_id == 1: cmd = "DISPENSE A"
+    elif box_id == 2: cmd = "DISPENSE B"
+    else: return False, f"صندوق {box_id} غير مدعوم حالياً"
     
-    move_servo(gate_pwm, 90)
-    time.sleep(0.5)
-    
-    move_servo(gate_pwm, 0)
-    time.sleep(0.3)
-    
-    move_servo(pwm_carousel, ZERO_ANGLE)
-    time.sleep(0.4)
-    return True, f"تم صرف جرعة من الصندوق {box_id} بنجاح"
+    try:
+        arduino.write((cmd + "\n").encode())
+        print(f"📡 Sent to Arduino: {cmd}")
+        return True, f"تم إرسال أمر الصرف للصندوق {box_id}"
+    except Exception as e:
+        return False, f"خطأ في الاتصال: {e}"
 
 
 # ========== Robot Control Functions ==========

@@ -1,5 +1,6 @@
 #include <MPU6050_light.h>
 #include <Wire.h>
+#include <Servo.h>
 
 MPU6050 mpu(Wire);
 
@@ -19,11 +20,34 @@ int echoPin = 3;
 float distance;
 long duration;
 
+// ======= DISPENSER HARDWARE (Allocated Pins) ========
+// Assumption: Using free digital pins 4, 7, 12
+Servo servoCarousel;
+Servo gateServoA; // For Slot A
+Servo gateServoB; // For Slot B
+
+int PIN_CAROUSEL = 4;
+int PIN_GATE_A = 7;
+int PIN_GATE_B = 12;
+
+// Dispenser Configuration
+const int SLOT_A_ANGLE = 30;    // Calibrate this!
+const int SLOT_B_ANGLE = 210;   // Calibrate this! (30 + 180)
+const int GATE_OPEN_ANGLE = 90;
+const int GATE_CLOSE_ANGLE = 0;
+
 // -------- Robot State --------
-enum RobotState { IDLE, MOVING, TURNING };
+enum RobotState { IDLE, MOVING, TURNING, DISPENSING };
 
 RobotState state = IDLE;
 bool isReversing = false;
+
+// Dispensing State Machine
+enum DispenseStage { D_ROTATE, D_WAIT_ROTATE, D_OPEN, D_WAIT_USE, D_CLOSE, D_FINISH };
+DispenseStage dispStage = D_ROTATE;
+unsigned long dispTimer = 0;
+Servo* activeGateServo = NULL;
+int targetCarouselAngle = 0;
 
 float obstacleDistance = 20.0;
 
@@ -176,6 +200,74 @@ void turnInPlace() {
   analogWrite(ENB, turnSpeed);
 }
 
+// ============ Dispensing Logic ============
+
+void startDispense(char slot) {
+  if (state != IDLE) {
+    Serial.println("ERR:BUSY");
+    return;
+  }
+  
+  state = DISPENSING;
+  dispStage = D_ROTATE;
+  
+  if (slot == 'A') {
+    targetCarouselAngle = SLOT_A_ANGLE;
+    activeGateServo = &gateServoA;
+  } else {
+    targetCarouselAngle = SLOT_B_ANGLE;
+    activeGateServo = &gateServoB;
+  }
+  
+  Serial.print("DISPENSE:START_");
+  Serial.println(slot);
+}
+
+void updateDispenser() {
+  unsigned long now = millis();
+  
+  switch(dispStage) {
+    case D_ROTATE:
+      servoCarousel.write(targetCarouselAngle);
+      dispTimer = now;
+      dispStage = D_WAIT_ROTATE;
+      break;
+      
+    case D_WAIT_ROTATE:
+      if (now - dispTimer > 1000) { // Wait 1s for rotation
+        dispStage = D_OPEN;
+      }
+      break;
+      
+    case D_OPEN:
+      if(activeGateServo) activeGateServo->write(GATE_OPEN_ANGLE);
+      dispTimer = now;
+      dispStage = D_WAIT_USE;
+      break;
+      
+    case D_WAIT_USE:
+      if (now - dispTimer > 2000) { // Wait 2s for drops
+        dispStage = D_CLOSE;
+      }
+      break;
+      
+    case D_CLOSE:
+      if(activeGateServo) activeGateServo->write(GATE_CLOSE_ANGLE);
+      servoCarousel.write(SLOT_A_ANGLE); // Home position
+      dispTimer = now;
+      dispStage = D_FINISH;
+      break;
+      
+    case D_FINISH:
+      if (now - dispTimer > 500) {
+        state = IDLE;
+        Serial.println("STATUS:DISPENSE_COMPLETE");
+      }
+      break;
+  }
+}
+
+
 // ============ Setup ============
 void setup() {
   Serial.begin(9600);
@@ -190,9 +282,23 @@ void setup() {
 
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
+  
+  // Servos
+  servoCarousel.attach(PIN_CAROUSEL);
+  gateServoA.attach(PIN_GATE_A);
+  gateServoB.attach(PIN_GATE_B);
+  
+  // Home Servos
+  servoCarousel.write(SLOT_A_ANGLE);
+  gateServoA.write(GATE_CLOSE_ANGLE);
+  gateServoB.write(GATE_CLOSE_ANGLE);
 
   Wire.begin();
-  mpu.begin();
+  
+  // MPU Init Safety Check
+  byte status = mpu.begin();
+  if(status != 0){ } // Could add error LED here
+  
   delay(1000);
   mpu.calcOffsets();
 
@@ -202,7 +308,7 @@ void setup() {
 // ============ Command Handler ============
 void checkSerialCommands() {
   if (Serial.available() > 0) {
-    String command = Serial.readString();
+    String command = Serial.readStringUntil('\n'); // Read until newline
     command.trim();
     command.toUpperCase();
 
@@ -239,6 +345,12 @@ void checkSerialCommands() {
       // Chain: Turn 180 -> Wait for next command (or User sends Start)
       startTurnDegrees(180);
       Serial.println("OK:STARTING_RETURN");
+      
+    } else if (command == "DISPENSE A") {
+      startDispense('A');
+      
+    } else if (command == "DISPENSE B") {
+      startDispense('B');
     }
   }
 }
@@ -249,8 +361,12 @@ static unsigned long lastPrintTime = 0;
 void loop() {
   checkSerialCommands();
 
-  if (state == TURNING) {
+  if (state == DISPENSING) {
+    updateDispenser();
+    
+  } else if (state == TURNING) {
     turnInPlace();
+    
   } else if (state == MOVING) {
     distance = getDistance();
 
@@ -279,5 +395,5 @@ void loop() {
     stopRobot();
   }
 
-  delay(50);
+  delay(20); // Slightly faster loop
 }
