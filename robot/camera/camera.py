@@ -29,7 +29,7 @@ class Camera:
                 # Create configuration with FrameRate control
                 config = self.picam2.create_preview_configuration(
                     main={"format": "BGR888", "size": (width, height)},
-                    controls={"FrameRate": 30}
+                    controls={"FrameRate": 20}
                 )
                 self.picam2.configure(config)
                 

@@ -57,7 +57,7 @@ def get_face_engine():
     
     # Reload DB occasionally (e.g. every 10 seconds)
     import time
-    if time.time() - last_db_refresh > 10:
+    if time.time() - last_db_refresh > 60:
         if face_engine:
              from robot.camera.face_db import load_faces
              faces_db = load_faces()
@@ -88,7 +88,7 @@ def gen_frames():
             frame = get_placeholder_frame("Wait for Camera...")
             
             # Encode
-            ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
+            ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
             if ret:
                 frame_bytes = buffer.tobytes()
                 yield (b'--frame\r\n'
@@ -168,7 +168,7 @@ def gen_frames():
             print(f"Overlay Error: {e}")
 
         # ⚡ PERFORMANCE: Reduced JPEG quality (60) for faster encoding
-        ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
+        ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
         if not ret:
             continue
             
