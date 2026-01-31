@@ -23,6 +23,7 @@ SOUND_PRE_NOTIFY = os.path.join(VOICES_DIR, 'med_time01.mp3')   # قبل الم�
 SOUND_MISSED = os.path.join(VOICES_DIR, 'attentiion.mp3')       # عند فوات الموعد
 SOUND_THANKS = os.path.join(VOICES_DIR, 'thanks.mp3')           # بعد أخذ الدواء
 SOUND_EMERGENCY = os.path.join(VOICES_DIR, 'emergency.mp3')     # عند فتح الطوارئ
+SOUND_CAMERA = os.path.join(VOICES_DIR, 'start_camera.mp3')     # قبل تشغيل الكاميرا
 
 
 def play_sound(sound_path):
@@ -105,6 +106,8 @@ def check_and_dispense():
                 camera_started_key = f"camera_{current_date_key}"
                 if pre_notified.get(camera_started_key) != current_date_key:
                     print(f"📷 [{now.strftime('%H:%M:%S')}] تشغيل الكاميرا قبل موعد الصندوق {box_id}")
+                    # تشغيل صوت قبل الكاميرا
+                    play_sound(SOUND_CAMERA)
                     try:
                         from robot.camera.camera import camera
                         if camera and not camera.is_running():
