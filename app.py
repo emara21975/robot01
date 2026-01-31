@@ -406,12 +406,7 @@ def open_box():
     
                 log_dose(box, 'dispensed', 'success', f"{auth_msg} - تم الصرف")
                 
-                # 🔊 تشغيل صوت الشكر بعد الصرف
-                try:
-                    from scheduler import play_sound, SOUND_THANKS
-                    play_sound(SOUND_THANKS)
-                except Exception as sound_err:
-                    print(f"⚠️ خطأ في تشغيل الصوت: {sound_err}")
+                # الصوت سيعمل عند ضغط المريض على "تم أخذ الدواء"
                 
                 response = {"status": f"✓ {message}"}
                 if warning_msg:
@@ -456,10 +451,17 @@ def monitor_movement(duration=30):
 def go_home_return():
     """إرجاع الروبوت لنقطة البداية (Return to Home)."""
     try:
+        # 🔊 تشغيل صوت الشكر عند التأكيد
+        try:
+            from scheduler import play_sound, SOUND_THANKS
+            play_sound(SOUND_THANKS)
+        except Exception as sound_err:
+            print(f"⚠️ خطأ في تشغيل الصوت: {sound_err}")
+        
         if return_home():
              # Start Safety Timer (30 seconds)
              threading.Thread(target=monitor_movement, args=(30,), daemon=True).start()
-             return jsonify({"status": "✓ جاري الرجوع (Turn & Go)..."})
+             return jsonify({"status": "✓ شكراً لك! جاري الرجوع..."})
         else:
              return jsonify({"status": "✗ فشل إرسال أمر الرجوع"}), 500
     except Exception as e:
