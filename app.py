@@ -374,6 +374,13 @@ def open_box():
         log_event("DISPENSE_START", robot_state.current, f"Box: {box}", "INFO")
 
         try:
+            # 🔊 تشغيل صوت الطوارئ
+            try:
+                from scheduler import play_sound, SOUND_EMERGENCY
+                play_sound(SOUND_EMERGENCY)
+            except Exception as sound_err:
+                print(f"⚠️ خطأ في تشغيل الصوت: {sound_err}")
+            
             # 2. محاولة الصرف
             success, message = dispense_dose(box)
             

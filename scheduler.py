@@ -22,6 +22,7 @@ VOICES_DIR = os.path.join(os.path.dirname(__file__), 'voices')
 SOUND_PRE_NOTIFY = os.path.join(VOICES_DIR, 'med_time01.mp3')   # قبل الموعد بـ 30 ثانية
 SOUND_MISSED = os.path.join(VOICES_DIR, 'attentiion.mp3')       # عند فوات الموعد
 SOUND_THANKS = os.path.join(VOICES_DIR, 'thanks.mp3')           # بعد أخذ الدواء
+SOUND_EMERGENCY = os.path.join(VOICES_DIR, 'emergency.mp3')     # عند فتح الطوارئ
 
 
 def play_sound(sound_path):
