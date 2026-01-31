@@ -241,9 +241,12 @@ void checkSerialCommands() {
       Serial.println("OK:RAW_REVERSE");
 
     } else if (command == "RETURN") {
-      // Chain: Turn 180 -> Wait for next command (or User sends Start)
-      startTurnDegrees(180);
-      Serial.println("OK:STARTING_RETURN");
+      // Reverse backwards directly (no turn)
+      mpu.update();
+      targetYaw = normalize(mpu.getAngleZ());
+      state = MOVING;
+      isReversing = true;
+      Serial.println("OK:RETURNING_REVERSE");
       
     // DISPENSE commands removed - handled by Raspberry Pi GPIO now
     } else if (command == "DISPENSE A" || command == "DISPENSE B" || 
