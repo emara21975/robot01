@@ -124,7 +124,7 @@ def check_and_dispense():
                     last_dispensed[box_id] = current_date_key
                     log_dose(box_id, 'auto_dispensed', 'success', f'جرعة تلقائية - {message}')
                     print(f"✅ تم صرف جرعة من الصندوق {box_id}")
-                    play_sound(SOUND_THANKS)  # شكراً بعد أخذ الدواء
+                    # صوت الشكر سيعمل عند ضغط المريض على "تم أخذ الدواء"
                 else:
                     log_dose(box_id, 'auto_dispensed', 'failed', message)
                     print(f"❌ فشل صرف جرعة من الصندوق {box_id}: {message}")
