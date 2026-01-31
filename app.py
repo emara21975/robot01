@@ -571,6 +571,84 @@ def api_test_status():
     dist = get_latest_distance()
     return jsonify({"ok": True, "distance_cm": dist})
 
+
+# ========== صفحة اختبار السيرفو (بدون قيود) ==========
+
+@app.route("/servo_test")
+def servo_test_page():
+    """صفحة اختبار الهاردوير بدون قيود."""
+    return render_template("servo_test.html")
+
+
+@app.route("/api/servo_test/carousel", methods=["POST"])
+def api_servo_carousel():
+    """تدوير الصندوق مباشرة (بدون قيود)."""
+    data = request.get_json(silent=True) or {}
+    angle = int(data.get("angle", 30))
+    
+    if not connect_arduino():
+        return jsonify({"ok": False, "message": "Arduino غير متصل"}), 500
+    
+    try:
+        from hardware import arduino
+        cmd = f"CAROUSEL {angle}\n"
+        arduino.write(cmd.encode())
+        return jsonify({"ok": True, "message": f"تم تدوير الصندوق إلى {angle}°"})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)}), 500
+
+
+@app.route("/api/servo_test/gate", methods=["POST"])
+def api_servo_gate():
+    """فتح/غلق باب مباشرة (بدون قيود)."""
+    data = request.get_json(silent=True) or {}
+    gate = data.get("gate", "A").upper()
+    angle = int(data.get("angle", 0))
+    
+    if not connect_arduino():
+        return jsonify({"ok": False, "message": "Arduino غير متصل"}), 500
+    
+    try:
+        from hardware import arduino
+        cmd = f"GATE {gate} {angle}\n"
+        arduino.write(cmd.encode())
+        action = "فتح" if angle > 45 else "غلق"
+        return jsonify({"ok": True, "message": f"تم {action} باب {gate}"})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)}), 500
+
+
+@app.route("/api/servo_test/dispense", methods=["POST"])
+def api_servo_dispense():
+    """صرف من خانة (بدون قيود)."""
+    data = request.get_json(silent=True) or {}
+    slot = data.get("slot", "A").upper()
+    
+    if not connect_arduino():
+        return jsonify({"ok": False, "message": "Arduino غير متصل"}), 500
+    
+    try:
+        from hardware import arduino
+        cmd = f"DISPENSE {slot}\n"
+        arduino.write(cmd.encode())
+        return jsonify({"ok": True, "message": f"تم إرسال أمر الصرف للخانة {slot}"})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)}), 500
+
+
+@app.route("/api/servo_test/stop", methods=["POST"])
+def api_servo_stop():
+    """إيقاف طوارئ."""
+    if not connect_arduino():
+        return jsonify({"ok": False, "message": "Arduino غير متصل"}), 500
+    
+    try:
+        from hardware import arduino
+        arduino.write(b"STOP\n")
+        return jsonify({"ok": True, "message": "تم إرسال أمر الإيقاف"})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)}), 500
+
 # ========== تشغيل التطبيق ==========
 
 if __name__ == "__main__":

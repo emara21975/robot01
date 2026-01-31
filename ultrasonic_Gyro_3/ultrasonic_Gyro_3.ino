@@ -411,6 +411,33 @@ void checkSerialCommands() {
       
     } else if (command == "DISPENSE B") {
       startDispense('B');
+      
+    // ========== RAW TEST COMMANDS (No State Machine) ==========
+    } else if (command.startsWith("CAROUSEL ")) {
+      // Direct carousel control: CAROUSEL <angle>
+      int angle = command.substring(9).toInt();
+      angle = constrain(angle, 0, 270);
+      servoCarousel.write(angle);
+      Serial.print("OK:CAROUSEL_");
+      Serial.println(angle);
+      
+    } else if (command.startsWith("GATE A ")) {
+      // Direct gate A control: GATE A <angle>
+      int angle = command.substring(7).toInt();
+      angle = constrain(angle, 0, 180);
+      if(!gateServoA.attached()) gateServoA.attach(PIN_GATE_A);
+      gateServoA.write(angle);
+      Serial.print("OK:GATE_A_");
+      Serial.println(angle);
+      
+    } else if (command.startsWith("GATE B ")) {
+      // Direct gate B control: GATE B <angle>
+      int angle = command.substring(7).toInt();
+      angle = constrain(angle, 0, 180);
+      if(!gateServoB.attached()) gateServoB.attach(PIN_GATE_B);
+      gateServoB.write(angle);
+      Serial.print("OK:GATE_B_");
+      Serial.println(angle);
     }
   }
 }

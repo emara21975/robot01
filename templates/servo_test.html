@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 اختبار صندوق الدواء</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #00d9ff;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card h2 {
+            color: #ffd700;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 120px;
+            padding: 15px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .btn-rotate {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-gate {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-home {
+            background: #FF9800;
+            color: white;
+        }
+
+        .btn-stop {
+            background: #f44336;
+            color: white;
+        }
+
+        .slider-container {
+            margin: 15px 0;
+        }
+
+        .slider-container label {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 30px;
+            cursor: pointer;
+        }
+
+        .angle-display {
+            text-align: center;
+            font-size: 24px;
+            color: #00d9ff;
+            margin-top: 10px;
+        }
+
+        #status {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-family: monospace;
+            min-height: 100px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-success {
+            color: #4CAF50;
+        }
+
+        .log-error {
+            color: #f44336;
+        }
+
+        .log-info {
+            color: #00d9ff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔧 اختبار صندوق الدواء</h1>
+
+        <!-- Carousel Control -->
+        <div class="card">
+            <h2>🔄 تدوير الصندوق (Carousel)</h2>
+            <div class="slider-container">
+                <label>زاوية الدوران:</label>
+                <input type="range" id="carouselAngle" min="0" max="180" value="30">
+                <div class="angle-display"><span id="carouselValue">30</span>°</div>
+            </div>
+            <div class="btn-group">
+                <button class="btn-rotate" onclick="setCarousel()">⚙️ تطبيق الزاوية</button>
+                <button class="btn-home" onclick="setCarouselAngle(30)">🏠 خانة A (30°)</button>
+                <button class="btn-home" onclick="setCarouselAngle(210)">📦 خانة B (210°)</button>
+            </div>
+        </div>
+
+        <!-- Gate A Control -->
+        <div class="card">
+            <h2>🚪 باب الخانة A</h2>
+            <div class="btn-group">
+                <button class="btn-gate" onclick="setGate('A', 90)">🔓 فتح</button>
+                <button class="btn-stop" onclick="setGate('A', 0)">🔒 غلق</button>
+            </div>
+        </div>
+
+        <!-- Gate B Control -->
+        <div class="card">
+            <h2>🚪 باب الخانة B</h2>
+            <div class="btn-group">
+                <button class="btn-gate" onclick="setGate('B', 90)">🔓 فتح</button>
+                <button class="btn-stop" onclick="setGate('B', 0)">🔒 غلق</button>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <h2>⚡ أوامر سريعة</h2>
+            <div class="btn-group">
+                <button class="btn-rotate" onclick="dispense('A')">💊 صرف خانة A</button>
+                <button class="btn-rotate" onclick="dispense('B')">💊 صرف خانة B</button>
+                <button class="btn-stop" onclick="sendStop()">🛑 إيقاف طوارئ</button>
+            </div>
+        </div>
+
+        <!-- Status Log -->
+        <div id="status">
+            <div class="log-info">🔌 جاهز للاختبار...</div>
+        </div>
+    </div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const carouselSlider = document.getElementById('carouselAngle');
+        const carouselValue = document.getElementById('carouselValue');
+
+        carouselSlider.oninput = () => {
+            carouselValue.textContent = carouselSlider.value;
+        };
+
+        function log(msg, type = 'info') {
+            const line = document.createElement('div');
+            line.className = 'log-' + type;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            statusDiv.appendChild(line);
+            statusDiv.scrollTop = statusDiv.scrollHeight;
+        }
+
+        async function sendCommand(endpoint, data = {}) {
+            try {
+                log(`📡 إرسال: ${endpoint}`, 'info');
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const json = await res.json();
+                log(`✅ ${json.message || json.status || 'OK'}`, 'success');
+                return json;
+            } catch (e) {
+                log(`❌ خطأ: ${e.message}`, 'error');
+            }
+        }
+
+        function setCarousel() {
+            const angle = parseInt(carouselSlider.value);
+            sendCommand('/api/servo_test/carousel', { angle });
+        }
+
+        function setCarouselAngle(angle) {
+            carouselSlider.value = Math.min(angle, 180);
+            carouselValue.textContent = angle;
+            sendCommand('/api/servo_test/carousel', { angle });
+        }
+
+        function setGate(gate, angle) {
+            sendCommand('/api/servo_test/gate', { gate, angle });
+        }
+
+        function dispense(slot) {
+            sendCommand('/api/servo_test/dispense', { slot });
+        }
+
+        function sendStop() {
+            sendCommand('/api/servo_test/stop');
+        }
+    </script>
+</body>
+
+</html>
