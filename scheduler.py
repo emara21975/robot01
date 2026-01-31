@@ -2,22 +2,63 @@
 """
 نظام الجدولة التلقائية - Scheduler
 يعمل في الخلفية ويفحص الجداول وينفذ الجرعات تلقائياً
+مع دعم التنبيهات الصوتية
 """
 
 import threading
 import time
-from datetime import datetime
+import os
+from datetime import datetime, timedelta
 
 # متغيرات الحالة
 scheduler_thread = None
 scheduler_running = False
 last_dispensed = {1: None, 2: None}  # لمنع التكرار في نفس الدقيقة
+pre_notified = {1: None, 2: None}    # لمنع تكرار التنبيه المسبق
+missed_notified = {1: None, 2: None} # لمنع تكرار تنبيه الفوات
+
+# مسارات الأصوات
+VOICES_DIR = os.path.join(os.path.dirname(__file__), 'voices')
+SOUND_PRE_NOTIFY = os.path.join(VOICES_DIR, 'med_time01.mp3')   # قبل الموعد بـ 30 ثانية
+SOUND_MISSED = os.path.join(VOICES_DIR, 'attentiion.mp3')       # عند فوات الموعد
+
+
+def play_sound(sound_path):
+    """
+    تشغيل ملف صوتي.
+    يعمل على Raspberry Pi باستخدام mpg123 أو pygame.
+    """
+    if not os.path.exists(sound_path):
+        print(f"⚠️ ملف الصوت غير موجود: {sound_path}")
+        return False
+    
+    try:
+        # محاولة استخدام pygame
+        try:
+            import pygame
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+            pygame.mixer.music.load(sound_path)
+            pygame.mixer.music.play()
+            print(f"🔊 تشغيل: {os.path.basename(sound_path)}")
+            return True
+        except ImportError:
+            pass
+        
+        # محاولة استخدام mpg123 (متوفر على Pi)
+        os.system(f'mpg123 -q "{sound_path}" &')
+        print(f"🔊 تشغيل: {os.path.basename(sound_path)}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ خطأ في تشغيل الصوت: {e}")
+        return False
 
 
 def check_and_dispense():
     """
     فحص الجداول وتنفيذ الجرعات إذا حان الموعد.
-    تُستدعى كل 30 ثانية.
+    تُستدعى كل 10 ثواني للتحقق من التنبيهات.
     """
     from database import get_all_schedules
     from hardware import dispense_dose
@@ -30,6 +71,7 @@ def check_and_dispense():
         js_day = (current_day + 1) % 7
         current_hour = now.hour
         current_minute = now.minute
+        current_second = now.second
         
         schedules = get_all_schedules()
         
@@ -50,13 +92,25 @@ def check_and_dispense():
             if js_day not in days:
                 continue
             
-            # تحقق إذا حان الموعد (نفس الساعة والدقيقة)
+            # إنشاء وقت الجرعة المستهدف
+            target_time = now.replace(hour=target_hour, minute=target_minute, second=0, microsecond=0)
+            time_diff = (target_time - now).total_seconds()
+            
+            current_date_key = f"{now.date()}-{target_hour}-{target_minute}"
+            
+            # ====== 1. التنبيه المسبق (30 ثانية قبل الموعد) ======
+            if 25 <= time_diff <= 35:  # بين 25-35 ثانية قبل الموعد
+                if pre_notified.get(box_id) != current_date_key:
+                    print(f"🔔 [{now.strftime('%H:%M:%S')}] تنبيه مسبق للصندوق {box_id}!")
+                    play_sound(SOUND_PRE_NOTIFY)
+                    pre_notified[box_id] = current_date_key
+            
+            # ====== 2. تحقق إذا حان الموعد (نفس الساعة والدقيقة) ======
             if current_hour == target_hour and current_minute == target_minute:
                 # تحقق أننا لم نصرف هذه الجرعة في هذه الدقيقة
                 last_time = last_dispensed.get(box_id)
-                current_key = f"{now.date()}-{current_hour}-{current_minute}"
                 
-                if last_time == current_key:
+                if last_time == current_date_key:
                     continue  # تم الصرف بالفعل
                 
                 # صرف الجرعة
@@ -65,12 +119,23 @@ def check_and_dispense():
                 success, message = dispense_dose(box_id)
                 
                 if success:
-                    last_dispensed[box_id] = current_key
+                    last_dispensed[box_id] = current_date_key
                     log_dose(box_id, 'auto_dispensed', 'success', f'جرعة تلقائية - {message}')
                     print(f"✅ تم صرف جرعة من الصندوق {box_id}")
                 else:
                     log_dose(box_id, 'auto_dispensed', 'failed', message)
                     print(f"❌ فشل صرف جرعة من الصندوق {box_id}: {message}")
+            
+            # ====== 3. تنبيه فوات الموعد (بعد 5 دقائق من الموعد بدون أخذ) ======
+            # إذا مر الموعد بـ 5 دقائق ولم يتم الصرف
+            if -300 <= time_diff < -280:  # بين 280-300 ثانية بعد الموعد (حوالي 5 دقائق)
+                if missed_notified.get(box_id) != current_date_key:
+                    # تحقق إذا لم يتم الصرف
+                    if last_dispensed.get(box_id) != current_date_key:
+                        print(f"⚠️ [{now.strftime('%H:%M:%S')}] فات موعد الصندوق {box_id}!")
+                        play_sound(SOUND_MISSED)
+                        log_dose(box_id, 'missed', 'warning', 'فات موعد الجرعة بدون أخذها')
+                    missed_notified[box_id] = current_date_key
                     
     except Exception as e:
         print(f"❌ خطأ في الجدولة: {e}")
@@ -91,8 +156,8 @@ def scheduler_loop():
         except Exception as e:
             print(f"❌ خطأ في حلقة الجدولة: {e}")
         
-        # انتظار 30 ثانية قبل الفحص التالي
-        for _ in range(30):
+        # انتظار 10 ثواني قبل الفحص التالي (لدقة التنبيهات)
+        for _ in range(10):
             if not scheduler_running:
                 break
             time.sleep(1)
