@@ -918,6 +918,7 @@
             if (!schedules[boxId] || !schedules[boxId].enabled) return null;
             const now = new Date();
             const currentDay = now.getDay();
+
             for (let i = 0; i <= 7; i++) {
                 const checkDay = (currentDay + i) % 7;
                 if (selectedDays[boxId].includes(checkDay)) {
@@ -925,7 +926,11 @@
                     nextDate.setDate(nextDate.getDate() + i);
                     nextDate.setHours(schedules[boxId].hour, schedules[boxId].minute, 0, 0);
                     const diff = nextDate - now;
-                    if (diff > -60000) return Math.floor(diff / 1000); // Allow 1 min past
+
+                    // إذا كان الوقت قد مر، ابحث عن الموعد التالي
+                    if (diff > 0) {
+                        return Math.floor(diff / 1000);
+                    }
                 }
             }
             return null;
