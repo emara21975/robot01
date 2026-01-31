@@ -272,6 +272,55 @@ def dispense_dose(box_id):
         return False, f"خطأ في صرف الصندوق {box_id}: {e}"
 
 
+# ========== Face Verification with Timeout ==========
+
+def verify_face_with_timeout(timeout_seconds=15):
+    """
+    التحقق من الوجه مع مهلة زمنية.
+    يفحص كل ثانية إذا تم التعرف على وجه مسجّل.
+    
+    Args:
+        timeout_seconds: المهلة بالثواني (افتراضي 15)
+    
+    Returns:
+        True إذا تم التعرف على وجه مسجّل
+        False إذا انتهت المهلة أو لم يتم التعرف
+    """
+    try:
+        from robot.camera.stream import get_last_face
+    except ImportError:
+        print("   ⚠️ نظام التعرف على الوجه غير متاح")
+        return True  # السماح بالصرف إذا النظام غير متاح
+    
+    start_time = time.time()
+    check_interval = 1.0  # فحص كل ثانية
+    
+    print(f"   🔍 بدء البحث عن وجه مسجّل (مهلة {timeout_seconds}s)...")
+    
+    while (time.time() - start_time) < timeout_seconds:
+        elapsed = int(time.time() - start_time)
+        remaining = timeout_seconds - elapsed
+        
+        # الحصول على آخر وجه معروف
+        face_data = get_last_face()
+        
+        if face_data:
+            name = face_data.get("name", "Unknown")
+            score = face_data.get("score", 0)
+            face_time = face_data.get("time", 0)
+            
+            # التحقق أن الوجه تم رصده حديثاً (خلال آخر 5 ثواني)
+            if name != "Unknown" and (time.time() - face_time) < 5:
+                print(f"   ✅ تم التعرف على: {name} (ثقة: {score:.2f})")
+                return True
+        
+        print(f"   ⏳ انتظار الوجه... ({remaining}s متبقي)")
+        time.sleep(check_interval)
+    
+    print(f"   ⏰ انتهت المهلة - لم يتم التعرف على وجه")
+    return False
+
+
 def full_dispense_sequence(box_id):
     """
     تسلسل الصرف الكامل مع حركة الروبوت.
@@ -306,8 +355,37 @@ def full_dispense_sequence(box_id):
     time.sleep(ROBOT_SETTLE_TIME)
     print(f"   ✓ تم التثبيت")
     
-    # ======== 3-6. صرف الجرعة (يشمل تدوير الكاروسيل + فتح/إغلاق البوابة) ========
-    print(f"\n📍 الخطوات 3-6: صرف الجرعة من الصندوق {box_id}")
+    # ======== 3. التحقق من الوجه (إذا مفعّل) ========
+    face_verified = False
+    try:
+        from database import get_setting
+        val = str(get_setting("auth_enabled", "0")).strip()
+        auth_enabled = val == "1"
+        
+        if auth_enabled:
+            print(f"\n📍 الخطوة 3: التحقق من الوجه (15 ثانية)")
+            face_verified = verify_face_with_timeout(15)
+            
+            if not face_verified:
+                print(f"   ❌ فشل التحقق من الوجه - إلغاء الصرف")
+                # إرجاع الروبوت بدون صرف
+                print(f"\n📍 إرجاع الروبوت بدون صرف...")
+                if return_home():
+                    time.sleep(ROBOT_BACKWARD_TIME)
+                    stop_robot()
+                return False, "فشل التحقق من الوجه - لم يتم الصرف"
+            else:
+                print(f"   ✓ تم التحقق من الوجه بنجاح!")
+        else:
+            print(f"\n📍 الخطوة 3: التحقق من الوجه (معطّل)")
+            print(f"   ⚠️ نظام التحقق معطّل - متابعة الصرف")
+            face_verified = True  # تخطي التحقق
+    except Exception as auth_err:
+        print(f"   ⚠️ خطأ في فحص الإعدادات: {auth_err}")
+        face_verified = True  # السماح بالصرف عند الخطأ
+    
+    # ======== 4-7. صرف الجرعة (يشمل تدوير الكاروسيل + فتح/إغلاق البوابة) ========
+    print(f"\n📍 الخطوات 4-7: صرف الجرعة من الصندوق {box_id}")
     success, message = dispense_dose(box_id)
     
     if not success:
