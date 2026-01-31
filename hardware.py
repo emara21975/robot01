@@ -24,6 +24,13 @@ BOX_CONFIG = {
     2: {'pin': 24, 'open_angle': 90, 'close_angle': 0},
 }
 
+# ============ زوايا الكاروسيل لكل صندوق ============
+# الكاروسيل يدور ليوجه الفتحة للصندوق المطلوب
+BOX_ANGLES = {
+    1: 0,      # الصندوق الأول - نقطة الصفر
+    2: 90,     # الصندوق الثاني - 90 درجة
+}
+
 # مدة الانتظار بعد فتح البوابة (ثواني)
 DISPENSE_HOLD_TIME = 3
 
@@ -184,13 +191,16 @@ def dispense_dose(box_id):
     
     الخطوات:
     1. التحقق من صحة box_id
-    2. فتح البوابة بحركة سلسة
-    3. الانتظار لسقوط الدواء
-    4. إغلاق البوابة
-    5. إيقاف PWM لمنع الاهتزاز
+    2. تدوير الكاروسيل لزاوية الصندوق المطلوب
+    3. فتح البوابة بحركة سلسة
+    4. الانتظار لسقوط الدواء
+    5. إغلاق البوابة
+    6. إيقاف PWM لمنع الاهتزاز
     
     لا يتم استخدام Arduino هنا - تحكم GPIO مباشر.
     """
+    global current_carousel_angle
+    
     # 1. التحقق من صحة معرف الصندوق
     if box_id not in BOX_CONFIG:
         return False, f"صندوق {box_id} غير موجود في BOX_CONFIG"
@@ -198,13 +208,16 @@ def dispense_dose(box_id):
     config = BOX_CONFIG[box_id]
     open_angle = config['open_angle']
     close_angle = config['close_angle']
+    carousel_angle = BOX_ANGLES.get(box_id, 0)
     
-    # 2. الحصول على كائن PWM
-    pwm = gate_pwms.get(box_id)
+    # 2. الحصول على كائنات PWM
+    gate_pwm = gate_pwms.get(box_id)
     
     # 3. وضع المحاكاة إذا لم يكن GPIO متاحاً
-    if not HAS_GPIO or pwm is None:
+    if not HAS_GPIO or gate_pwm is None:
         print(f"[SIMULATION] 📦 Dispensing from Box {box_id}")
+        print(f"  - Rotating carousel to {carousel_angle}°")
+        time.sleep(0.5)
         print(f"  - Opening gate to {open_angle}°")
         time.sleep(1)
         print(f"  - Holding for {DISPENSE_HOLD_TIME}s")
@@ -216,20 +229,27 @@ def dispense_dose(box_id):
     try:
         print(f"📦 جاري صرف جرعة من الصندوق {box_id}...")
         
-        # 4. فتح البوابة (حركة سلسة)
-        print(f"  ↗️ فتح البوابة: {close_angle}° -> {open_angle}°")
-        smooth_move(pwm, close_angle, open_angle, steps=25)
+        # 4. تدوير الكاروسيل لزاوية الصندوق (إذا لزم)
+        if pwm_carousel and current_carousel_angle != carousel_angle:
+            print(f"  🔄 تدوير الكاروسيل: {current_carousel_angle}° -> {carousel_angle}°")
+            smooth_move(pwm_carousel, current_carousel_angle, carousel_angle, steps=40)
+            current_carousel_angle = carousel_angle
+            time.sleep(0.3)  # استقرار
         
-        # 5. الانتظار لسقوط الدواء
+        # 5. فتح البوابة (حركة سلسة)
+        print(f"  ↗️ فتح البوابة: {close_angle}° -> {open_angle}°")
+        smooth_move(gate_pwm, close_angle, open_angle, steps=25)
+        
+        # 6. الانتظار لسقوط الدواء
         print(f"  ⏳ الانتظار {DISPENSE_HOLD_TIME} ثواني...")
         time.sleep(DISPENSE_HOLD_TIME)
         
-        # 6. إغلاق البوابة
+        # 7. إغلاق البوابة
         print(f"  ↙️ إغلاق البوابة: {open_angle}° -> {close_angle}°")
-        smooth_move(pwm, open_angle, close_angle, steps=25)
+        smooth_move(gate_pwm, open_angle, close_angle, steps=25)
         
-        # 7. إيقاف PWM لمنع الاهتزاز والحرارة
-        pwm.ChangeDutyCycle(0)
+        # 8. إيقاف PWM لمنع الاهتزاز والحرارة
+        gate_pwm.ChangeDutyCycle(0)
         
         print(f"  ✅ تم صرف الجرعة بنجاح!")
         return True, f"تم صرف جرعة من الصندوق {box_id}"
@@ -238,10 +258,10 @@ def dispense_dose(box_id):
         print(f"  ❌ خطأ: {e}")
         # محاولة إغلاق البوابة في حالة الخطأ
         try:
-            if pwm:
-                set_servo_angle(pwm, close_angle)
+            if gate_pwm:
+                set_servo_angle(gate_pwm, close_angle)
                 time.sleep(0.5)
-                pwm.ChangeDutyCycle(0)
+                gate_pwm.ChangeDutyCycle(0)
         except:
             pass
         return False, f"خطأ في صرف الصندوق {box_id}: {e}"
