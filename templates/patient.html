@@ -628,6 +628,11 @@
                         يرجى النظر للكاميرا لتأكيد الهوية
                     </p>
                     <div class="camera-controls">
+                        <!-- Camera Toggle Button -->
+                        <button onclick="toggleCamera()" id="camera-toggle-btn" class="btn-large"
+                            style="background: var(--warning); flex: 1; max-width: 150px;">
+                            📷 تشغيل الكاميرا
+                        </button>
                         <button onclick="verifyFace()" class="btn-large verify-btn">
                             📸 تحقق من الوجه
                         </button>
@@ -1020,6 +1025,79 @@
                 }
             }
         }
+
+        // Theme
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            if (html.getAttribute('data-theme') === 'light') {
+                html.removeAttribute('data-theme'); icon.textContent = '🌙'; localStorage.setItem('theme', 'dark');
+            } else {
+                html.setAttribute('data-theme', 'light'); icon.textContent = '☀️'; localStorage.setItem('theme', 'light');
+            }
+        }
+
+        // ========== Camera Control ==========
+        let cameraRunning = false;
+
+        async function toggleCamera() {
+            const btn = document.getElementById('camera-toggle-btn');
+            const statusLabel = document.getElementById('camera-status-label');
+
+            try {
+                btn.disabled = true;
+                btn.textContent = '⏳ جاري...';
+
+                const endpoint = cameraRunning ? '/camera/stop' : '/camera/start';
+                const res = await fetch(endpoint, { method: 'POST' });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    cameraRunning = data.running;
+                    updateCameraUI();
+                } else {
+                    alert('خطأ: ' + (data.message || 'فشل العملية'));
+                }
+            } catch (e) {
+                alert('خطأ في الاتصال');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function updateCameraUI() {
+            const btn = document.getElementById('camera-toggle-btn');
+            const statusLabel = document.getElementById('camera-status-label');
+            const cameraFeed = document.getElementById('camera-feed-img');
+
+            if (cameraRunning) {
+                btn.textContent = '⏹️ إيقاف الكاميرا';
+                btn.style.background = 'var(--danger)';
+                statusLabel.innerHTML = '🔴 بث حي';
+                // Refresh the video feed
+                if (cameraFeed) {
+                    cameraFeed.src = '/video?' + new Date().getTime();
+                }
+            } else {
+                btn.textContent = '📷 تشغيل الكاميرا';
+                btn.style.background = 'var(--warning)';
+                statusLabel.innerHTML = '⚪ الكاميرا مغلقة';
+            }
+        }
+
+        async function checkCameraStatus() {
+            try {
+                const res = await fetch('/camera/status');
+                const data = await res.json();
+                cameraRunning = data.running || false;
+                updateCameraUI();
+            } catch (e) {
+                console.log('Camera status check failed');
+            }
+        }
+
+        // Check camera status on load
+        checkCameraStatus();
 
         // Theme
         function toggleTheme() {

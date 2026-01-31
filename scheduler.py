@@ -100,6 +100,19 @@ def check_and_dispense():
             
             current_date_key = f"{now.date()}-{target_hour}-{target_minute}"
             
+            # ====== 0. تشغيل الكاميرا (60 ثانية قبل الموعد) ======
+            if 55 <= time_diff <= 65:  # بين 55-65 ثانية قبل الموعد
+                camera_started_key = f"camera_{current_date_key}"
+                if pre_notified.get(camera_started_key) != current_date_key:
+                    print(f"📷 [{now.strftime('%H:%M:%S')}] تشغيل الكاميرا قبل موعد الصندوق {box_id}")
+                    try:
+                        from robot.camera.camera import camera
+                        if camera and not camera.is_running():
+                            camera.start()
+                    except Exception as cam_err:
+                        print(f"⚠️ خطأ في تشغيل الكاميرا: {cam_err}")
+                    pre_notified[camera_started_key] = current_date_key
+            
             # ====== 1. التنبيه المسبق (30 ثانية قبل الموعد) ======
             if 25 <= time_diff <= 35:  # بين 25-35 ثانية قبل الموعد
                 if pre_notified.get(box_id) != current_date_key:
@@ -130,6 +143,15 @@ def check_and_dispense():
                 else:
                     log_dose(box_id, 'auto_dispensed', 'failed', message)
                     print(f"❌ فشل صرف جرعة من الصندوق {box_id}: {message}")
+                
+                # ====== إيقاف الكاميرا بعد الصرف (لتوفير الموارد) ======
+                try:
+                    from robot.camera.camera import camera
+                    if camera and camera.is_running():
+                        print(f"📷 [{now.strftime('%H:%M:%S')}] إيقاف الكاميرا بعد الصرف")
+                        camera.stop()
+                except Exception as cam_err:
+                    print(f"⚠️ خطأ في إيقاف الكاميرا: {cam_err}")
             
             # ====== 3. تنبيه فوات الموعد (بعد 5 دقائق من الموعد بدون أخذ) ======
             # إذا مر الموعد بـ 5 دقائق ولم يتم الصرف

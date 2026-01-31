@@ -78,6 +78,18 @@ def gen_frames():
     last_rec_time = 0
     
     while True:
+        # Check if camera is running
+        if camera and not camera.is_running():
+            # Camera is OFF - show placeholder
+            frame = get_placeholder_frame("📷 CAMERA OFF")
+            ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+            if ret:
+                frame_bytes = buffer.tobytes()
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            time.sleep(1.0)
+            continue
+        
         if camera:
             frame = camera.get_frame()
         else:

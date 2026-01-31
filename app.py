@@ -320,6 +320,52 @@ def verify():
         }), 500
 
 
+# ========== Camera Control API ==========
+
+@app.route("/camera/start", methods=["POST"])
+def camera_start():
+    """تشغيل الكاميرا عند الطلب."""
+    try:
+        from robot.camera.camera import camera
+        if camera:
+            success = camera.start()
+            if success:
+                return jsonify({"status": "success", "message": "تم تشغيل الكاميرا", "running": True})
+            else:
+                return jsonify({"status": "error", "message": "فشل تشغيل الكاميرا"}), 500
+        return jsonify({"status": "error", "message": "الكاميرا غير متاحة"}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/camera/stop", methods=["POST"])
+def camera_stop():
+    """إيقاف الكاميرا لتوفير الموارد."""
+    try:
+        from robot.camera.camera import camera
+        if camera:
+            camera.stop()
+            return jsonify({"status": "success", "message": "تم إيقاف الكاميرا", "running": False})
+        return jsonify({"status": "error", "message": "الكاميرا غير متاحة"}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/camera/status", methods=["GET"])
+def camera_status():
+    """الحصول على حالة الكاميرا."""
+    try:
+        from robot.camera.camera import camera
+        if camera:
+            return jsonify({
+                "status": "success",
+                "running": camera.is_running()
+            })
+        return jsonify({"status": "error", "running": False, "message": "الكاميرا غير متاحة"})
+    except Exception as e:
+        return jsonify({"status": "error", "running": False, "message": str(e)})
+
+
 # ========== API التحكم في الصناديق ==========
 
 @app.route("/open_box", methods=["POST"])
