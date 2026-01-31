@@ -115,10 +115,12 @@ def check_and_dispense():
                 if last_time == current_date_key:
                     continue  # تم الصرف بالفعل
                 
-                # صرف الجرعة
+                # صرف الجرعة مع حركة الروبوت الكاملة
                 print(f"⏰ [{now.strftime('%H:%M:%S')}] حان موعد الصندوق {box_id}!")
                 
-                success, message = dispense_dose(box_id)
+                # استخدام التسلسل الكامل (مع حركة الروبوت)
+                from hardware import full_dispense_sequence
+                success, message = full_dispense_sequence(box_id)
                 
                 if success:
                     last_dispensed[box_id] = current_date_key
