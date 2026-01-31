@@ -21,6 +21,7 @@ missed_notified = {1: None, 2: None} # لمنع تكرار تنبيه الفوا
 VOICES_DIR = os.path.join(os.path.dirname(__file__), 'voices')
 SOUND_PRE_NOTIFY = os.path.join(VOICES_DIR, 'med_time01.mp3')   # قبل الموعد بـ 30 ثانية
 SOUND_MISSED = os.path.join(VOICES_DIR, 'attentiion.mp3')       # عند فوات الموعد
+SOUND_THANKS = os.path.join(VOICES_DIR, 'thanks.mp3')           # بعد أخذ الدواء
 
 
 def play_sound(sound_path):
@@ -122,6 +123,7 @@ def check_and_dispense():
                     last_dispensed[box_id] = current_date_key
                     log_dose(box_id, 'auto_dispensed', 'success', f'جرعة تلقائية - {message}')
                     print(f"✅ تم صرف جرعة من الصندوق {box_id}")
+                    play_sound(SOUND_THANKS)  # شكراً بعد أخذ الدواء
                 else:
                     log_dose(box_id, 'auto_dispensed', 'failed', message)
                     print(f"❌ فشل صرف جرعة من الصندوق {box_id}: {message}")
