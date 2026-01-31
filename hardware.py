@@ -194,20 +194,28 @@ def dispense_dose(box_id):
     """
     صرف جرعة من صندوق الدواء عبر GPIO مباشرة.
     
-    الخطوات:
-    1. التحقق من صحة box_id
-    2. تدوير الكاروسيل لزاوية الصندوق المطلوب
-    3. فتح البوابة بحركة سلسة
-    4. الانتظار لسقوط الدواء
-    5. إغلاق البوابة
-    6. إيقاف PWM لمنع الاهتزاز
-    
-    لا يتم استخدام Arduino هنا - تحكم GPIO مباشر.
+    التسلسل الكامل:
+    1. Pre-Dispense Check (التحقق قبل الصرف)
+    2. تدوير الكاروسيل لزاوية الصندوق
+    3. تأكيد موضع الكاروسيل
+    4. فتح البوابة بحركة سلسة
+    5. الانتظار لسقوط الدواء
+    6. إغلاق البوابة
+    7. تسجيل العملية
+    8. إيقاف PWM
     """
     global current_carousel_angle
     
-    # 1. التحقق من صحة معرف الصندوق
+    print(f"\n{'─'*40}")
+    print(f"📦 بدء عملية صرف الدواء - الصندوق {box_id}")
+    print(f"{'─'*40}")
+    
+    # ======== 1. Pre-Dispense Check ========
+    print(f"\n🔍 الخطوة 1: التحقق قبل الصرف")
+    
+    # 1.1 التحقق من صحة معرف الصندوق
     if box_id not in BOX_CONFIG:
+        print(f"   ❌ خطأ: الصندوق {box_id} غير موجود")
         return False, f"صندوق {box_id} غير موجود في BOX_CONFIG"
     
     config = BOX_CONFIG[box_id]
@@ -215,60 +223,109 @@ def dispense_dose(box_id):
     close_angle = config['close_angle']
     carousel_angle = BOX_ANGLES.get(box_id, 0)
     
-    # 2. الحصول على كائنات PWM
+    # 1.2 الحصول على كائنات PWM
     gate_pwm = gate_pwms.get(box_id)
     
-    # 3. وضع المحاكاة إذا لم يكن GPIO متاحاً
-    if not HAS_GPIO or gate_pwm is None:
-        print(f"[SIMULATION] 📦 Dispensing from Box {box_id}")
-        print(f"  - Rotating carousel to {carousel_angle}°")
+    # 1.3 التحقق من جاهزية GPIO
+    if not HAS_GPIO:
+        print(f"   ⚠️ وضع المحاكاة (GPIO غير متاح)")
+        # محاكاة الصرف
+        print(f"   [SIM] تدوير الكاروسيل: {current_carousel_angle}° → {carousel_angle}°")
         time.sleep(0.5)
-        print(f"  - Opening gate to {open_angle}°")
+        print(f"   [SIM] فتح البوابة: {close_angle}° → {open_angle}°")
         time.sleep(1)
-        print(f"  - Holding for {DISPENSE_HOLD_TIME}s")
+        print(f"   [SIM] انتظار {DISPENSE_HOLD_TIME}s...")
         time.sleep(DISPENSE_HOLD_TIME)
-        print(f"  - Closing gate to {close_angle}°")
+        print(f"   [SIM] إغلاق البوابة")
         time.sleep(1)
+        current_carousel_angle = carousel_angle
+        print(f"   ✅ تم الصرف بنجاح (محاكاة)")
         return True, f"تم صرف جرعة من الصندوق {box_id} (محاكاة)"
     
+    if gate_pwm is None:
+        print(f"   ❌ خطأ: gate_pwm للصندوق {box_id} غير مهيأ")
+        return False, f"بوابة الصندوق {box_id} غير مهيأة"
+    
+    print(f"   ✓ الصندوق {box_id} جاهز للصرف")
+    print(f"   ✓ زوايا: carousel={carousel_angle}°, gate={close_angle}°→{open_angle}°")
+    
     try:
-        print(f"📦 جاري صرف جرعة من الصندوق {box_id}...")
+        # ======== 2. تدوير الكاروسيل ========
+        print(f"\n🔄 الخطوة 2: تدوير الكاروسيل")
         
-        # 4. تدوير الكاروسيل لزاوية الصندوق (إذا لزم)
         if pwm_carousel and current_carousel_angle != carousel_angle:
-            print(f"  🔄 تدوير الكاروسيل: {current_carousel_angle}° -> {carousel_angle}°")
+            print(f"   تدوير: {current_carousel_angle}° → {carousel_angle}°")
             smooth_move(pwm_carousel, current_carousel_angle, carousel_angle, steps=40)
+            time.sleep(0.3)  # تثبيت
             current_carousel_angle = carousel_angle
-            time.sleep(0.3)  # استقرار
+        else:
+            print(f"   ✓ الكاروسيل في الموضع ({carousel_angle}°)")
         
-        # 5. فتح البوابة (حركة سلسة)
-        print(f"  ↗️ فتح البوابة: {close_angle}° -> {open_angle}°")
+        # ======== 3. تأكيد موضع الكاروسيل ========
+        print(f"\n✓ الخطوة 3: تأكيد الموضع")
+        if current_carousel_angle == carousel_angle:
+            print(f"   ✓ تأكيد: الكاروسيل في الزاوية {carousel_angle}°")
+        else:
+            print(f"   ❌ خطأ: الكاروسيل في {current_carousel_angle}° بدلاً من {carousel_angle}°")
+            return False, f"فشل تأكيد موضع الكاروسيل"
+        
+        # ======== 4. فتح البوابة ========
+        print(f"\n↗️ الخطوة 4: فتح البوابة")
+        print(f"   من {close_angle}° → {open_angle}°")
         smooth_move(gate_pwm, close_angle, open_angle, steps=25)
+        print(f"   ✓ البوابة مفتوحة")
         
-        # 6. الانتظار لسقوط الدواء
-        print(f"  ⏳ الانتظار {DISPENSE_HOLD_TIME} ثواني...")
+        # ======== 5. انتظار سقوط الدواء ========
+        print(f"\n⏳ الخطوة 5: انتظار سقوط الدواء ({DISPENSE_HOLD_TIME}s)")
         time.sleep(DISPENSE_HOLD_TIME)
+        print(f"   ✓ الانتظار انتهى")
         
-        # 7. إغلاق البوابة
-        print(f"  ↙️ إغلاق البوابة: {open_angle}° -> {close_angle}°")
+        # ======== 6. إغلاق البوابة ========
+        print(f"\n↙️ الخطوة 6: إغلاق البوابة")
+        print(f"   من {open_angle}° → {close_angle}°")
         smooth_move(gate_pwm, open_angle, close_angle, steps=25)
+        print(f"   ✓ البوابة مغلقة")
         
-        # 8. إيقاف PWM لمنع الاهتزاز والحرارة
+        # ======== 7. تسجيل العملية ========
+        print(f"\n📝 الخطوة 7: تسجيل العملية")
+        try:
+            from database import log_dose
+            log_dose(box_id, 'dispensed', 'success', f'صرف جرعة - الصندوق {box_id}')
+            print(f"   ✓ تم التسجيل في قاعدة البيانات")
+        except Exception as log_err:
+            print(f"   ⚠️ فشل التسجيل: {log_err}")
+        
+        # ======== 8. إيقاف PWM ========
+        print(f"\n🔧 الخطوة 8: إيقاف PWM")
         gate_pwm.ChangeDutyCycle(0)
+        print(f"   ✓ PWM متوقف")
         
-        print(f"  ✅ تم صرف الجرعة بنجاح!")
+        print(f"\n{'─'*40}")
+        print(f"✅ تم صرف الجرعة بنجاح من الصندوق {box_id}")
+        print(f"{'─'*40}")
+        
         return True, f"تم صرف جرعة من الصندوق {box_id}"
         
     except Exception as e:
-        print(f"  ❌ خطأ: {e}")
-        # محاولة إغلاق البوابة في حالة الخطأ
+        print(f"\n❌ خطأ أثناء الصرف: {e}")
+        # محاولة إغلاق البوابة للسلامة
         try:
             if gate_pwm:
+                print(f"   🔧 محاولة إغلاق البوابة للسلامة...")
                 set_servo_angle(gate_pwm, close_angle)
                 time.sleep(0.5)
                 gate_pwm.ChangeDutyCycle(0)
+                print(f"   ✓ تم إغلاق البوابة")
         except:
             pass
+        
+        # تسجيل الفشل
+        try:
+            from database import log_dose
+            log_dose(box_id, 'dispensed', 'failed', f'فشل الصرف: {e}')
+        except:
+            pass
+        
         return False, f"خطأ في صرف الصندوق {box_id}: {e}"
 
 
