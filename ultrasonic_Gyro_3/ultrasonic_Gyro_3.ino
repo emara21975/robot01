@@ -1,6 +1,5 @@
 #include <MPU6050_light.h>
 #include <Wire.h>
-#include <Servo.h>
 
 MPU6050 mpu(Wire);
 
@@ -20,35 +19,12 @@ int echoPin = 3;
 float distance;
 long duration;
 
-// ======= DISPENSER HARDWARE (Allocated Pins) ========
-// Assumption: Using free digital pins 4, 7, 12
-Servo servoCarousel;
-Servo gateServoA; // For Slot A
-Servo gateServoB; // For Slot B
-
-int PIN_CAROUSEL = 4;
-int PIN_GATE_A = 7;
-int PIN_GATE_B = 12;
-
-// Dispenser Configuration
-const int SLOT_A_ANGLE = 30;    // Calibrate this!
-const int SLOT_B_ANGLE = 210;   // Calibrate this!
-const int GATE_OPEN_ANGLE = 90;
-const int GATE_CLOSE_ANGLE = 0;
-
 // -------- Robot State --------
-enum RobotState { IDLE, MOVING, TURNING, DISPENSING };
+// NOTE: DISPENSING state removed - now handled by Raspberry Pi GPIO
+enum RobotState { IDLE, MOVING, TURNING };
 
 RobotState state = IDLE;
 bool isReversing = false;
-
-// Dispensing State Machine
-enum DispenseStage { D_ROTATE, D_WAIT_ROTATE, D_OPEN, D_WAIT_USE, D_CLOSE, D_FINISH };
-DispenseStage dispStage = D_ROTATE;
-unsigned long dispTimer = 0;
-unsigned long dispenseStartMs = 0; // Watchdog Timer
-Servo* activeGateServo = NULL;
-int targetCarouselAngle = 0;
 
 float obstacleDistance = 20.0;
 
@@ -201,124 +177,6 @@ void turnInPlace() {
   analogWrite(ENB, turnSpeed);
 }
 
-// ============ Dispensing Logic (Safe Version) ============
-
-// Safety Helper: Close all gates immediately
-void closeAllGates() {
-  if(!gateServoA.attached()) gateServoA.attach(PIN_GATE_A);
-  if(!gateServoB.attached()) gateServoB.attach(PIN_GATE_B);
-  
-  gateServoA.write(GATE_CLOSE_ANGLE);
-  gateServoB.write(GATE_CLOSE_ANGLE);
-}
-
-// Safety Helper: Abort operation and reset state
-void abortDispense() {
-  closeAllGates();
-  servoCarousel.write(SLOT_A_ANGLE); // Reset carousel to safe known angle
-  
-  state = IDLE;
-  dispStage = D_ROTATE;
-  
-  // Power down gates after abort
-  delay(200);
-  gateServoA.detach();
-  gateServoB.detach();
-  
-  Serial.println("ERR:DISPENSE_ABORTED");
-}
-
-void startDispense(char slot) {
-  if (state != IDLE) {
-    Serial.println("ERR:BUSY");
-    return;
-  }
-  
-  // 1. Safety Close First
-  closeAllGates(); 
-  
-  state = DISPENSING;
-  dispStage = D_ROTATE;
-  dispTimer = millis();
-  dispenseStartMs = millis(); // Start Watchdog
-  
-  if (slot == 'A') {
-    targetCarouselAngle = SLOT_A_ANGLE;
-    activeGateServo = &gateServoA;
-  } else {
-    targetCarouselAngle = SLOT_B_ANGLE;
-    activeGateServo = &gateServoB;
-  }
-  
-  Serial.print("DISPENSE:START_");
-  Serial.println(slot);
-}
-
-void updateDispenser() {
-  unsigned long now = millis();
-  
-  // ⚠️ 4. Watchdog Timer (8 Seconds Timeout)
-  if (now - dispenseStartMs > 8000) {
-      Serial.println("ERR:WATCHDOG_TIMEOUT");
-      abortDispense();
-      return;
-  }
-  
-  switch(dispStage) {
-    case D_ROTATE:
-      servoCarousel.write(targetCarouselAngle);
-      dispTimer = now;
-      dispStage = D_WAIT_ROTATE;
-      break;
-      
-    case D_WAIT_ROTATE:
-      if (now - dispTimer > 1000) { // Wait 1s for rotation
-        dispStage = D_OPEN;
-      }
-      break;
-      
-    case D_OPEN:
-      // Ensure specific servo is attached before move
-      if (activeGateServo && !activeGateServo->attached()) {
-          if (activeGateServo == &gateServoA) gateServoA.attach(PIN_GATE_A);
-          else if (activeGateServo == &gateServoB) gateServoB.attach(PIN_GATE_B);
-      }
-      
-      if(activeGateServo) activeGateServo->write(GATE_OPEN_ANGLE);
-      dispTimer = now;
-      dispStage = D_WAIT_USE;
-      break;
-      
-    case D_WAIT_USE:
-      if (now - dispTimer > 2000) { // Wait 2s for drops
-        dispStage = D_CLOSE;
-      }
-      break;
-      
-    case D_CLOSE:
-      if(activeGateServo) activeGateServo->write(GATE_CLOSE_ANGLE);
-      
-      // ⚠️ 3. REMOVED Auto-Home to prevent risk
-      // servoCarousel.write(SLOT_A_ANGLE); 
-      
-      dispTimer = now;
-      dispStage = D_FINISH;
-      break;
-      
-    case D_FINISH:
-      if (now - dispTimer > 500) {
-        state = IDLE;
-        
-        // ⚠️ 2. Detach to save power/heat
-        gateServoA.detach();
-        gateServoB.detach();
-        
-        Serial.println("STATUS:DISPENSE_COMPLETE");
-      }
-      break;
-  }
-}
-
 
 // ============ Setup ============
 void setup() {
@@ -334,21 +192,6 @@ void setup() {
 
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
-  
-  // Servos
-  servoCarousel.attach(PIN_CAROUSEL);
-  gateServoA.attach(PIN_GATE_A);
-  gateServoB.attach(PIN_GATE_B);
-  
-  // Home Servos
-  servoCarousel.write(SLOT_A_ANGLE);
-  gateServoA.write(GATE_CLOSE_ANGLE);
-  gateServoB.write(GATE_CLOSE_ANGLE);
-  
-  // Stabilize and Detach Gates
-  delay(1000);
-  gateServoA.detach();
-  gateServoB.detach();
 
   Wire.begin();
   
@@ -360,6 +203,7 @@ void setup() {
   mpu.calcOffsets();
 
   Serial.println("READY");
+  Serial.println("NOTE: Dispenser control moved to Raspberry Pi GPIO");
 }
 
 // ============ Command Handler ============
@@ -369,8 +213,6 @@ void checkSerialCommands() {
     command.trim();
     command.toUpperCase();
 
-    // Serial.print("CMD="); Serial.println(command);
-
     if (command == "START" || command == "GO") {
       mpu.update();
       targetYaw = normalize(mpu.getAngleZ());
@@ -379,9 +221,6 @@ void checkSerialCommands() {
       Serial.println("OK:MOVING_FWD");
 
     } else if (command == "STOP") {
-      // ⚠️ 1. Safety Halt
-      abortDispense();
-      
       state = IDLE;
       stopRobot();
       Serial.println("OK:STOPPED");
@@ -406,38 +245,13 @@ void checkSerialCommands() {
       startTurnDegrees(180);
       Serial.println("OK:STARTING_RETURN");
       
-    } else if (command == "DISPENSE A") {
-      startDispense('A');
-      
-    } else if (command == "DISPENSE B") {
-      startDispense('B');
-      
-    // ========== RAW TEST COMMANDS (No State Machine) ==========
-    } else if (command.startsWith("CAROUSEL ")) {
-      // Direct carousel control: CAROUSEL <angle>
-      int angle = command.substring(9).toInt();
-      angle = constrain(angle, 0, 270);
-      servoCarousel.write(angle);
-      Serial.print("OK:CAROUSEL_");
-      Serial.println(angle);
-      
-    } else if (command.startsWith("GATE A ")) {
-      // Direct gate A control: GATE A <angle>
-      int angle = command.substring(7).toInt();
-      angle = constrain(angle, 0, 180);
-      if(!gateServoA.attached()) gateServoA.attach(PIN_GATE_A);
-      gateServoA.write(angle);
-      Serial.print("OK:GATE_A_");
-      Serial.println(angle);
-      
-    } else if (command.startsWith("GATE B ")) {
-      // Direct gate B control: GATE B <angle>
-      int angle = command.substring(7).toInt();
-      angle = constrain(angle, 0, 180);
-      if(!gateServoB.attached()) gateServoB.attach(PIN_GATE_B);
-      gateServoB.write(angle);
-      Serial.print("OK:GATE_B_");
-      Serial.println(angle);
+    // DISPENSE commands removed - handled by Raspberry Pi GPIO now
+    } else if (command == "DISPENSE A" || command == "DISPENSE B" || 
+               command.startsWith("CAROUSEL ") || 
+               command.startsWith("GATE A ") || 
+               command.startsWith("GATE B ")) {
+      Serial.println("ERR:DISPENSE_MOVED_TO_PI");
+      Serial.println("NOTE: Dispensing is now controlled by Raspberry Pi GPIO");
     }
   }
 }
@@ -448,10 +262,7 @@ static unsigned long lastPrintTime = 0;
 void loop() {
   checkSerialCommands();
 
-  if (state == DISPENSING) {
-    updateDispenser();
-    
-  } else if (state == TURNING) {
+  if (state == TURNING) {
     turnInPlace();
     
   } else if (state == MOVING) {
@@ -463,11 +274,8 @@ void loop() {
       Serial.println(distance);
     }
 
-    // Safety Stop
+    // Safety Stop on Obstacle
     if (distance > 0 && distance <= obstacleDistance) {
-      // ⚠️ 1. Safety Halt on Obstacle
-      abortDispense();
-      
       state = IDLE;
       stopRobot();
       currentSpeed = 0;
