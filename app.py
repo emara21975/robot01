@@ -406,6 +406,13 @@ def open_box():
     
                 log_dose(box, 'dispensed', 'success', f"{auth_msg} - تم الصرف")
                 
+                # 🔊 تشغيل صوت الشكر بعد الصرف
+                try:
+                    from scheduler import play_sound, SOUND_THANKS
+                    play_sound(SOUND_THANKS)
+                except Exception as sound_err:
+                    print(f"⚠️ خطأ في تشغيل الصوت: {sound_err}")
+                
                 response = {"status": f"✓ {message}"}
                 if warning_msg:
                     response["warning_message"] = warning_msg
