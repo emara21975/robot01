@@ -3,7 +3,7 @@
 
 MPU6050 mpu(Wire);
 
-// ======= L298N ========
+// ======= L298N Motor Driver ========
 int ENA = 5;
 int IN1 = 8;
 int IN2 = 9;
@@ -12,7 +12,7 @@ int ENB = 6;
 int IN3 = 10;
 int IN4 = 11;
 
-// ======= Ultrasonic ========
+// ======= Ultrasonic Sensor ========
 int trigPin = 2;
 int echoPin = 3;
 
@@ -20,42 +20,36 @@ float distance;
 long duration;
 
 // -------- Robot State --------
-// NOTE: DISPENSING state removed - now handled by Raspberry Pi GPIO
-enum RobotState { IDLE, MOVING, TURNING };
+// Simple: IDLE or MOVING (forward/backward)
+enum RobotState { IDLE, MOVING };
 
 RobotState state = IDLE;
 bool isReversing = false;
 
 float obstacleDistance = 20.0;
 
-// -------- PID --------
+// -------- PID for straight line --------
 float Kp = 3.0;
 float Ki = 0.01;
 float Kd = 1.5;
 
 float errorSum = 0;
 float lastError = 0;
+float targetYaw = 0;
 
 // -------- Speed Ramp --------
 int currentSpeed = 0;
 int targetSpeed = 150;
 int speedStep = 5;
 
-// -------- Targets --------
-float targetYaw = 0;
-float turnTargetYaw = 0;
-unsigned long turnStartMs = 0;
-
-// ============ Normalize ============
+// ============ Normalize angle to -180 to 180 ============
 float normalize(float angle) {
-  while (angle > 180)
-    angle -= 360;
-  while (angle < -180)
-    angle += 360;
+  while (angle > 180) angle -= 360;
+  while (angle < -180) angle += 360;
   return angle;
 }
 
-// ============ Ultrasonic ============
+// ============ Ultrasonic Distance ============
 float getDistance() {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
@@ -87,6 +81,7 @@ void forwardPID(int baseSpeed) {
   int L = constrain(baseSpeed - correction, 0, 255);
   int R = constrain(baseSpeed + correction, 0, 255);
 
+  // Forward direction
   digitalWrite(IN1, HIGH);
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, HIGH);
@@ -107,10 +102,11 @@ void backwardPID(int baseSpeed) {
 
   float correction = Kp * error + Ki * errorSum + Kd * derivative;
 
-  // Reverse correction logic (inverted steering)
+  // Reverse correction for backward
   int L = constrain(baseSpeed + correction, 0, 255);
   int R = constrain(baseSpeed - correction, 0, 255);
 
+  // Backward direction
   digitalWrite(IN1, LOW);
   digitalWrite(IN2, HIGH);
   digitalWrite(IN3, LOW);
@@ -120,69 +116,13 @@ void backwardPID(int baseSpeed) {
   analogWrite(ENB, R);
 }
 
-// ============ Turn In Place Logic ============
-void startTurnDegrees(float deltaDeg) {
-  mpu.update();
-  float yaw = normalize(mpu.getAngleZ());
-  turnTargetYaw = normalize(yaw + deltaDeg);
-
-  errorSum = 0;
-  lastError = 0;
-  turnStartMs = millis();
-
-  state = TURNING;
-  currentSpeed = 0;
-
-  Serial.print("TURN_DEG:");
-  Serial.println(deltaDeg);
-  Serial.print("FROM:");
-  Serial.println(yaw);
-  Serial.print("TARGET:");
-  Serial.println(turnTargetYaw);
-}
-
-void turnInPlace() {
-  mpu.update();
-  float yaw = normalize(mpu.getAngleZ());
-  float error = normalize(turnTargetYaw - yaw);
-
-  // Threshold to stop turning (3 degrees)
-  if (abs(error) < 3) {
-    stopRobot();
-    delay(500);
-
-    // Default behavior: Go IDLE after turn
-    state = IDLE;
-    Serial.println("STATUS:TURN_COMPLETE");
-    return;
-  }
-
-  int turnSpeed = 100; // Fixed turn speed
-
-  if (error > 0) {
-    // Turn Right (CW)
-    digitalWrite(IN1, HIGH);
-    digitalWrite(IN2, LOW);
-    digitalWrite(IN3, LOW);
-    digitalWrite(IN4, HIGH);
-  } else {
-    // Turn Left (CCW)
-    digitalWrite(IN1, LOW);
-    digitalWrite(IN2, HIGH);
-    digitalWrite(IN3, HIGH);
-    digitalWrite(IN4, LOW);
-  }
-
-  analogWrite(ENA, turnSpeed);
-  analogWrite(ENB, turnSpeed);
-}
-
 
 // ============ Setup ============
 void setup() {
   Serial.begin(9600);
   Serial.setTimeout(50);
 
+  // Motor pins
   pinMode(ENA, OUTPUT);
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
@@ -190,71 +130,59 @@ void setup() {
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
 
+  // Ultrasonic pins
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
 
+  // MPU6050 init
   Wire.begin();
-  
-  // MPU Init Safety Check
   byte status = mpu.begin();
-  if(status != 0){ } // Could add error LED here
   
   delay(1000);
   mpu.calcOffsets();
 
   Serial.println("READY");
-  Serial.println("NOTE: Dispenser control moved to Raspberry Pi GPIO");
+  Serial.println("Commands: START, STOP, RETURN");
 }
 
 // ============ Command Handler ============
 void checkSerialCommands() {
   if (Serial.available() > 0) {
-    String command = Serial.readStringUntil('\n'); // Read until newline
+    String command = Serial.readStringUntil('\n');
     command.trim();
     command.toUpperCase();
 
     if (command == "START" || command == "GO") {
+      // Move forward
       mpu.update();
       targetYaw = normalize(mpu.getAngleZ());
+      errorSum = 0;
+      lastError = 0;
+      currentSpeed = 0;
       state = MOVING;
       isReversing = false;
-      Serial.println("OK:MOVING_FWD");
+      Serial.println("OK:MOVING_FORWARD");
 
     } else if (command == "STOP") {
       state = IDLE;
+      currentSpeed = 0;
       stopRobot();
       Serial.println("OK:STOPPED");
 
-    } else if (command == "RIGHT") {
-      startTurnDegrees(90);
-      Serial.println("OK:TURN_RIGHT");
-
-    } else if (command == "LEFT") {
-      startTurnDegrees(-90);
-      Serial.println("OK:TURN_LEFT");
-
-    } else if (command == "REVERSE") {
+    } else if (command == "RETURN" || command == "REVERSE") {
+      // Move backward
       mpu.update();
       targetYaw = normalize(mpu.getAngleZ());
+      errorSum = 0;
+      lastError = 0;
+      currentSpeed = 0;
       state = MOVING;
       isReversing = true;
-      Serial.println("OK:RAW_REVERSE");
+      Serial.println("OK:MOVING_BACKWARD");
 
-    } else if (command == "RETURN") {
-      // Reverse backwards directly (no turn)
-      mpu.update();
-      targetYaw = normalize(mpu.getAngleZ());
-      state = MOVING;
-      isReversing = true;
-      Serial.println("OK:RETURNING_REVERSE");
-      
-    // DISPENSE commands removed - handled by Raspberry Pi GPIO now
-    } else if (command == "DISPENSE A" || command == "DISPENSE B" || 
-               command.startsWith("CAROUSEL ") || 
-               command.startsWith("GATE A ") || 
-               command.startsWith("GATE B ")) {
-      Serial.println("ERR:DISPENSE_MOVED_TO_PI");
-      Serial.println("NOTE: Dispensing is now controlled by Raspberry Pi GPIO");
+    } else {
+      Serial.print("ERR:UNKNOWN_CMD:");
+      Serial.println(command);
     }
   }
 }
@@ -265,36 +193,39 @@ static unsigned long lastPrintTime = 0;
 void loop() {
   checkSerialCommands();
 
-  if (state == TURNING) {
-    turnInPlace();
-    
-  } else if (state == MOVING) {
+  if (state == MOVING) {
     distance = getDistance();
 
+    // Print distance every 200ms
     if (millis() - lastPrintTime >= 200) {
       lastPrintTime = millis();
       Serial.print("DISTANCE:");
       Serial.println(distance);
     }
 
-    // Safety Stop on Obstacle
-    if (distance > 0 && distance <= obstacleDistance) {
+    // Obstacle detection (only when moving forward)
+    if (!isReversing && distance > 0 && distance <= obstacleDistance) {
       state = IDLE;
       stopRobot();
       currentSpeed = 0;
       Serial.println("OBSTACLE:STOPPED");
     } else {
-      if (currentSpeed < targetSpeed)
+      // Speed ramp up
+      if (currentSpeed < targetSpeed) {
         currentSpeed += speedStep;
+      }
 
-      if (isReversing)
+      // Move with PID correction
+      if (isReversing) {
         backwardPID(currentSpeed);
-      else
+      } else {
         forwardPID(currentSpeed);
+      }
     }
   } else {
+    // IDLE state
     stopRobot();
   }
 
-  delay(20); // Slightly faster loop
+  delay(20);
 }
