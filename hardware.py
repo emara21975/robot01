@@ -431,11 +431,11 @@ def full_dispense_sequence(box_id):
        - تدوير كاروسيل -> انتظار 0.25s
        - فتح بوابة -> انتظار 3s
        - غلق بوابة
-    4. إرجاع كاروسيل للصفر -> انتظار 1s
     
     ملاحظة:
-    - الخطوة 5 (انتظار الزر) تتم عبر واجهة المستخدم
-    - الخطوة 6 (الرجوع للخلف) تتم عبر API /return_home عند ضغط الزر
+    - الكاروسيل يبقى في موضعه بعد الصرف
+    - العودة للصفر تتم فقط عند ضغط المريض على زر "تم أخذ الدواء"
+    - الرجوع للخلف يتم عبر API /return_home عند ضغط الزر
     """
     global current_carousel_angle
     
@@ -526,28 +526,7 @@ def full_dispense_sequence(box_id):
         gate_pwm.ChangeDutyCycle(0) # إيقاف PWM
         print(f"   ✓ تم إغلاق البوابة")
 
-    # ======== 4. العودة للصفر (نقطة ثابتة) ========
-    print(f"\n📍 الخطوة 4: العودة للصفر واعادة التعيين")
-    
-    # 🛡️ تطبيع الزاوية الحالية قبل العودة (حماية من القيم الخاطئة)
-    current_carousel_angle = max(0, min(180, current_carousel_angle))
-    
-    print(f"   🔍 الزاوية الحالية قبل العودة: {current_carousel_angle}°")
-    print(f"   🎯 الزاوية المستهدفة (ZERO): {ZERO_ANGLE}°")
-    
-    if HAS_GPIO and pwm_carousel:
-        # العودة دائماً لنقطة الصفر الثابتة (ZERO_ANGLE)
-        smooth_move(pwm_carousel, current_carousel_angle, ZERO_ANGLE, steps=60)
-        pwm_carousel.ChangeDutyCycle(0)
-        # إعادة تعيين المتغير ليكون مطابقاً للنقطة الثابتة
-        current_carousel_angle = ZERO_ANGLE
-        print(f"   ✓ الكاروسيل في وضع الصفر ({ZERO_ANGLE}°)")
-        print(f"   ✓ current_carousel_angle محدّث إلى: {current_carousel_angle}°")
-    
-    print(f"   ⏳ انتظار 1 ثانية...")
-    time.sleep(1)
-
-    print(f"\n✅ انتهى الصرف. في انتظار ضغط المريض للعودة.")
+    print(f"\n✅ انتهى الصرف. الكاروسيل في الموضع {current_carousel_angle}° - في انتظار ضغط المريض للعودة.")
     return True, "تم الصرف بنجاح - في انتظار المريض"
 
 
