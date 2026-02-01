@@ -10,7 +10,7 @@ import math
 import threading
 
 # ============ إعدادات السيرفو ============
-ZERO_ANGLE = 0       # نقطة الصفر المرجعية
+ZERO_ANGLE = 23      # نقطة الصفر المرجعية (تتطابق مع الصندوق 1)
 LOADING_ANGLE = 100  # زاوية أنبوب التحميل
 SERVO_DELAY = 0.03   # سرعة الحركة (0.03 = أبطأ وأنعم، 0.02 = سريع)
 
@@ -27,8 +27,8 @@ BOX_CONFIG = {
 # ============ زوايا الكاروسيل لكل صندوق ============
 # الكاروسيل يدور ليوجه الفتحة للصندوق المطلوب
 BOX_ANGLES = {
-    1: 23,      # الصندوق الأول - نقطة الصفر
-    2: 137,     # الصندوق الثاني - 90 درجة
+    1: 23,      # الصندوق الأول - نقطة الصفر (ZERO_ANGLE)
+    2: 137,     # الصندوق الثاني
 }
 
 # مدة الانتظار بعد فتح البوابة (ثواني)
@@ -39,8 +39,8 @@ ROBOT_FORWARD_TIME = 5    # ثواني للتحرك للأمام
 ROBOT_BACKWARD_TIME = 3   # ثواني للرجوع للخلف
 ROBOT_SETTLE_TIME = 1     # ثواني للتثبيت بعد التوقف
 
-# State Tracking
-current_carousel_angle = ZERO_ANGLE
+# State Tracking - الزاوية الحالية للكاروسيل
+current_carousel_angle = ZERO_ANGLE  # يبدأ عند 23° (الصندوق 1)
 
 # ========== محاولة استيراد مكتبات Raspberry Pi ==========
 HAS_GPIO = False
@@ -304,10 +304,11 @@ def dispense_dose(box_id):
         
         # ======== 3. تأكيد موضع الكاروسيل ========
         print(f"\n✓ الخطوة 3: تأكيد الموضع")
-        if current_carousel_angle == carousel_angle:
-            print(f"   ✓ تأكيد: الكاروسيل في الزاوية {carousel_angle}°")
+        # استخدام tolerance ±2° لأن السيرفو ميكانيكي
+        if abs(current_carousel_angle - carousel_angle) <= 2:
+            print(f"   ✓ تأكيد: الكاروسيل في الزاوية {carousel_angle}° (فرق: {abs(current_carousel_angle - carousel_angle):.1f}°)")
         else:
-            print(f"   ❌ خطأ: الكاروسيل في {current_carousel_angle}° بدلاً من {carousel_angle}°")
+            print(f"   ❌ خطأ: الكاروسيل في {current_carousel_angle}° بدلاً من {carousel_angle}° (فرق: {abs(current_carousel_angle - carousel_angle):.1f}°)")
             return False, f"فشل تأكيد موضع الكاروسيل"
         
         # ======== 4. فتح البوابة ========
@@ -554,6 +555,7 @@ def full_dispense_sequence(box_id):
 
 def load_medicine():
     """تدوير الكاروسيل لوضع التحميل."""
+    global current_carousel_angle
     # 🛡️ حماية: إيقاف محركات الروبوت قبل تحريك الكاروسيل
     try:
         stop_robot()
@@ -562,12 +564,14 @@ def load_medicine():
     
     if HAS_GPIO and pwm_carousel:
         move_servo(pwm_carousel, LOADING_ANGLE)
+        current_carousel_angle = LOADING_ANGLE
         print(f"🧪 تم التدوير لزاوية التحميل: {LOADING_ANGLE}°")
     else:
         print(f"[SIMULATION] Load mode: {LOADING_ANGLE}°")
 
 def go_home_zero():
     """إرجاع الكاروسيل لنقطة الصفر."""
+    global current_carousel_angle
     # 🛡️ حماية: إيقاف محركات الروبوت قبل تحريك الكاروسيل
     try:
         stop_robot()
@@ -576,6 +580,7 @@ def go_home_zero():
     
     if HAS_GPIO and pwm_carousel:
         move_servo(pwm_carousel, ZERO_ANGLE)
+        current_carousel_angle = ZERO_ANGLE
         print(f"🔄 تم الرجوع لنقطة الصفر: {ZERO_ANGLE}°")
     else:
         print(f"[SIMULATION] Zero position: {ZERO_ANGLE}°")
