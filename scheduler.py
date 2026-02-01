@@ -102,13 +102,13 @@ def check_and_dispense():
             current_date_key = f"{now.date()}-{target_hour}-{target_minute}"
             
             # ====== 0. تشغيل الكاميرا (60 ثانية قبل الموعد) ======
-            if 55 <= time_diff <= 65:  # بين 55-65 ثانية قبل الموعد
+            # ====== 0. تشغيل الكاميرا (1 دقيقة قبل الموعد) ======
+            if 55 <= time_diff <= 65:  # بين 55-65 ثانية
                 camera_started_key = f"camera_{current_date_key}"
                 if pre_notified.get(camera_started_key) != current_date_key:
-                    print(f"📷 [{now.strftime('%H:%M:%S')}] تشغيل الكاميرا قبل موعد الصندوق {box_id}")
-                    # تشغيل صوت قبل الكاميرا
-                    play_sound(SOUND_CAMERA)
+                    print(f"📷 [{now.strftime('%H:%M:%S')}] تشغيل الكاميرا (قبل دقيقة)")
                     try:
+                        play_sound(SOUND_CAMERA)
                         from robot.camera.camera import camera
                         if camera and not camera.is_running():
                             camera.start()
@@ -116,11 +116,22 @@ def check_and_dispense():
                         print(f"⚠️ خطأ في تشغيل الكاميرا: {cam_err}")
                     pre_notified[camera_started_key] = current_date_key
             
-            # ====== 1. التنبيه المسبق (30 ثانية قبل الموعد) ======
-            if 25 <= time_diff <= 35:  # بين 25-35 ثانية قبل الموعد
+            # ====== 1. التنبيه المسبق والحركة (30 ثانية قبل الموعد) ======
+            if 25 <= time_diff <= 35:  # بين 25-35 ثانية
                 if pre_notified.get(box_id) != current_date_key:
-                    print(f"🔔 [{now.strftime('%H:%M:%S')}] تنبيه مسبق للصندوق {box_id}!")
+                    print(f"🔔 [{now.strftime('%H:%M:%S')}] تنبيه وحركة (قبل 30 ثانية)")
                     play_sound(SOUND_PRE_NOTIFY)
+                    
+                    # تحريك الروبوت لمدة 3 ثواني
+                    try:
+                        from hardware import start_robot, stop_robot
+                        print("   🤖 تحرك للأمام (3 ثواني)...")
+                        if start_robot():
+                            time.sleep(3)
+                            stop_robot()
+                    except Exception as move_err:
+                        print(f"⚠️ فشل الحركة: {move_err}")
+
                     pre_notified[box_id] = current_date_key
             
             # ====== 2. تحقق إذا حان الموعد (نفس الساعة والدقيقة) ======
