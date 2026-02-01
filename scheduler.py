@@ -17,6 +17,9 @@ last_dispensed = {1: None, 2: None}  # لمنع التكرار في نفس ال�
 pre_notified = {1: None, 2: None}    # لمنع تكرار التنبيه المسبق
 missed_notified = {1: None, 2: None} # لمنع تكرار تنبيه الفوات
 
+# تتبع حركة الروبوت (للتمييز بين الصرف التلقائي والطوارئ)
+robot_moved_forward = False
+
 # مسارات الأصوات
 VOICES_DIR = os.path.join(os.path.dirname(__file__), 'voices')
 SOUND_PRE_NOTIFY = os.path.join(VOICES_DIR, 'med_time01.mp3')   # قبل الموعد بـ 30 ثانية
@@ -125,12 +128,12 @@ def check_and_dispense():
                     # 🤖 الحركة الذكية للروبوت (مع كشف العقبات)
                     try:
                         from hardware import start_robot, stop_robot, get_latest_distance
+                        global robot_moved_forward
                         
                         print("   🤖 بدء الحركة للأمام...")
                         if start_robot():
                             # ✅ تعيين العلم: الروبوت تحرك للأمام
-                            import app
-                            app.robot_moved_forward = True
+                            robot_moved_forward = True
                             
                             # الحركة لمدة أقصاها 5 ثواني
                             # لكن يتوقف فوراً لو اكتشف عقبة (سرير المريض)
@@ -252,3 +255,14 @@ def stop_scheduler():
 def is_scheduler_running():
     """التحقق من حالة الجدولة."""
     return scheduler_running
+
+
+def get_robot_moved_status():
+    """الحصول على حالة حركة الروبوت."""
+    return robot_moved_forward
+
+
+def reset_robot_moved_status():
+    """إعادة تعيين حالة حركة الروبوت."""
+    global robot_moved_forward
+    robot_moved_forward = False

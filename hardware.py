@@ -260,7 +260,7 @@ def dispense_dose(box_id):
         # لمنع التداخل الكهربائي بين PWM الكاروسيل و Arduino
         try:
             stop_robot()
-            time.sleep(0.1)  # انتظار قصير للتأكد من إيقاف المحركات
+            time.sleep(0.2)  # انتظار أطول للتأكد التام من إيقاف المحركات
             print("   🛡️ تم إيقاف محركات الروبوت قبل تحريك الكاروسيل (حماية من التداخل)")
         except Exception as safety_err:
             print(f"   ⚠️ تحذير: {safety_err}")
@@ -463,7 +463,7 @@ def full_dispense_sequence(box_id):
     # لمنع التداخل الكهربائي بين PWM الكاروسيل و Arduino
     try:
         stop_robot()
-        time.sleep(0.1)  # انتظار قصير للتأكد من إيقاف المحركات
+        time.sleep(0.2)  # انتظار أطول للتأكد التام من إيقاف المحركات
         print("   🛡️ تم إيقاف محركات الروبوت قبل تحريك الكاروسيل (حماية من التداخل)")
     except Exception as safety_err:
         print(f"   ⚠️ تحذير: {safety_err}")
@@ -562,9 +562,14 @@ def stop_robot():
     if not connect_arduino(): 
         return False
     try:
+        # إرسال أمر STOP عدة مرات للتأكد + تنظيف المخزن المؤقت
+        arduino.reset_input_buffer()  # مسح أي بيانات قديمة
         arduino.write(b'STOP\n')
         arduino.flush()
-        print("🛑 STOP -> Arduino")
+        time.sleep(0.05)  # انتظار قصير
+        arduino.write(b'STOP\n')  # إرسال مرة ثانية للتأكد
+        arduino.flush()
+        print("🛑 STOP -> Arduino (x2 + buffer clear)")
         return True
     except Exception as e:
         disconnect_arduino()

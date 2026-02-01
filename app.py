@@ -23,7 +23,10 @@ from hardware import (
 )
 
 # استيراد نظام الجدولة
-from scheduler import start_scheduler, stop_scheduler, is_scheduler_running
+from scheduler import (
+    start_scheduler, stop_scheduler, is_scheduler_running,
+    get_robot_moved_status, reset_robot_moved_status
+)
 
 # استيراد آلة الحالة (State Machine)
 from robot.state_machine import robot_state, RobotState
@@ -45,12 +48,6 @@ except ImportError:
 
 # ============ إنشاء التطبيق ============
 app = Flask(__name__)
-
-# ============ متغيرات عامة ============
-# تتبع إذا كان الروبوت تحرك للأمام (للصرف التلقائي)
-# True = الروبوت تحرك → يجب أن يرجع عند ضغط "تم أخذ الدواء"
-# False = الروبوت لم يتحرك (طوارئ) → لا يرجع
-robot_moved_forward = False
 
 
 # ========== صفحات HTML ==========
@@ -372,14 +369,12 @@ def camera_status():
 @app.route("/open_box", methods=["POST"])
 def open_box():
     """فتح صندوق دواء وصرف الجرعة (مع التحقق المشروط وآلة الحالة)."""
-    global robot_moved_forward
-    
     try:
         data = request.get_json(silent=True) or {}
         box = int(data.get("box", 0))
         
         # 🚨 صرف طوارئ (يدوي) - الروبوت لم يتحرك
-        robot_moved_forward = False
+        reset_robot_moved_status()
         
         # 0. التحقق من تفعيل الكاميرا
         val = str(get_setting("auth_enabled", "0")).strip()
@@ -524,8 +519,6 @@ def monitor_movement(duration=30):
 @app.route("/return_home", methods=["POST"])
 def go_home_return():
     """إرجاع الروبوت لنقطة البداية (Return to Home)."""
-    global robot_moved_forward
-    
     try:
         # 🔊 تشغيل صوت الشكر عند التأكيد
         try:
@@ -535,13 +528,13 @@ def go_home_return():
             print(f"⚠️ خطأ في تشغيل الصوت: {sound_err}")
         
         # ✅ تحقق: هل الروبوت تحرك للأمام؟
-        if robot_moved_forward:
+        if get_robot_moved_status():
             # الصرف التلقائي - الروبوت تحرك → يجب أن يرجع
             print("🔙 الروبوت سيرجع للخلف (صرف تلقائي)")
             if return_home():
                  # Start Safety Timer (30 seconds)
                  threading.Thread(target=monitor_movement, args=(30,), daemon=True).start()
-                 robot_moved_forward = False  # إعادة تعيين
+                 reset_robot_moved_status()  # إعادة تعيين
                  return jsonify({"status": "✓ شكراً لك! جاري الرجوع..."})
             else:
                  return jsonify({"status": "✗ فشل إرسال أمر الرجوع"}), 500
@@ -551,7 +544,7 @@ def go_home_return():
             return jsonify({"status": "✓ شكراً لك! نتمنى لك الشفاء العاجل ❤️"})
             
     except Exception as e:
-        robot_moved_forward = False  # إعادة تعيين عند الخطأ
+        reset_robot_moved_status()  # إعادة تعيين عند الخطأ
         return jsonify({"status": f"✗ خطأ: {str(e)}"}), 500
 
 
