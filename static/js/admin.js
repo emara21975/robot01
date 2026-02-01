@@ -265,6 +265,31 @@ function emergencyStop() {
     fetch('/robot/stop', { method: 'POST' });
 }
 
+async function systemRestart() {
+    if (!confirm("هل أنت متأكد من إعادة تشغيل النظام؟\nسيتم تنظيف الكاش وإعادة التشغيل.")) return;
+
+    addLog('🔄 جاري إعادة تشغيل النظام...');
+    setStatus('إعادة تشغيل', 'var(--warning)');
+
+    try {
+        const res = await fetch('/api/system/restart', { method: 'POST' });
+        const data = await res.json();
+        addLog(data.message);
+
+        // Reload after 10 seconds
+        setTimeout(() => {
+            window.location.reload();
+        }, 10000);
+
+    } catch (e) {
+        addLog('❌ خطأ في إعادة التشغيل');
+        // Try reloading anyway in case connection was lost due to restart
+        setTimeout(() => {
+            window.location.reload();
+        }, 10000);
+    }
+}
+
 async function toggleRobot() {
     const btn = document.getElementById('robot-toggle-btn');
     const text = document.getElementById('robot-toggle-text');

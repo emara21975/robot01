@@ -43,7 +43,7 @@ int speedStep = 5;
 
 // -------- Safety --------
 unsigned long lastCommandTime = 0;
-const unsigned long SAFETY_TIMEOUT = 3000; // 3 Seconds
+const unsigned long SAFETY_TIMEOUT = 5000; // 5 Seconds
 
 // ============ Normalize angle to -180 to 180 ============
 float normalize(float angle) {

@@ -170,8 +170,9 @@ def smooth_move(pwm, start_angle, end_angle, steps=30):
     # تأكيد الزاوية النهائية
     set_servo_angle(pwm, end_angle)
     time.sleep(0.1)
-    # إيقاف PWM لمنع الاهتزاز والحرارة
-    pwm.ChangeDutyCycle(0)
+    # إيقاف PWM لمنع الاهتزاز والحرارة (تحقق إضافي للسلامة)
+    if pwm is not None and hasattr(pwm, 'ChangeDutyCycle'):
+        pwm.ChangeDutyCycle(0)
 
 def move_servo(pwm, target_angle):
     """تحريك السيرفو لزاوية معينة."""
@@ -476,60 +477,6 @@ def full_dispense_sequence(box_id):
 
     print(f"\n✅ انتهى الصرف. في انتظار ضغط المريض للعودة.")
     return True, "تم الصرف بنجاح - في انتظار المريض"
-    
-    # ======== 4-7. صرف الجرعة (يشمل تدوير الكاروسيل + فتح/إغلاق البوابة) ========
-    print(f"\n📍 الخطوات 4-7: صرف الجرعة من الصندوق {box_id}")
-    success, message = dispense_dose(box_id)
-    
-    if not success:
-        print(f"   ❌ فشل الصرف: {message}")
-        # المتابعة لإرجاع الروبوت حتى مع الفشل
-    else:
-        print(f"   ✓ {message}")
-    
-    # ======== 7. إرجاع الكاروسيل لنقطة الصفر ========
-    print(f"\n📍 الخطوة 7: إرجاع الكاروسيل لنقطة الصفر")
-    print(f"   📊 HAS_GPIO={HAS_GPIO}, pwm_carousel={pwm_carousel}, current_angle={current_carousel_angle}")
-    
-    if HAS_GPIO and pwm_carousel:
-        if current_carousel_angle != ZERO_ANGLE:
-            print(f"   🔄 تدوير: {current_carousel_angle}° -> {ZERO_ANGLE}°")
-            smooth_move(pwm_carousel, current_carousel_angle, ZERO_ANGLE, steps=40)
-        else:
-            # حتى لو نفس الزاوية، أرسل الأمر للتأكيد
-            print(f"   🔄 تأكيد الزاوية: {ZERO_ANGLE}°")
-            set_servo_angle(pwm_carousel, ZERO_ANGLE)
-            time.sleep(0.5)
-            pwm_carousel.ChangeDutyCycle(0)
-        current_carousel_angle = ZERO_ANGLE
-        print(f"   ✓ الكاروسيل في نقطة الصفر ({ZERO_ANGLE}°)")
-    else:
-        if not HAS_GPIO:
-            print(f"   ⚠️ GPIO غير متاح - وضع المحاكاة")
-        elif not pwm_carousel:
-            print(f"   ⚠️ pwm_carousel غير مهيأ - محاولة إعادة التهيئة...")
-            setup_gpio()  # محاولة إعادة التهيئة
-            if pwm_carousel:
-                set_servo_angle(pwm_carousel, ZERO_ANGLE)
-                time.sleep(0.5)
-                pwm_carousel.ChangeDutyCycle(0)
-                print(f"   ✓ تم التهيئة والإرجاع للصفر")
-        current_carousel_angle = ZERO_ANGLE
-    
-    # ======== 8. رجوع الروبوت للخلف ========
-    print(f"\n📍 الخطوة 8: رجوع الروبوت للخلف ({ROBOT_BACKWARD_TIME} ثوانٍ)")
-    if return_home():
-        time.sleep(ROBOT_BACKWARD_TIME)
-        stop_robot()
-        print(f"   ✓ الروبوت عاد لموضعه الأصلي")
-    else:
-        print(f"   ⚠️ فشل إرجاع الروبوت")
-    
-    print(f"\n{'='*50}")
-    print(f"🏁 انتهى تسلسل الصرف للصندوق {box_id}")
-    print(f"{'='*50}\n")
-    
-    return success, message
 
 
 # ========== Maintenance Functions ==========

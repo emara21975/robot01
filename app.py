@@ -711,7 +711,44 @@ def api_servo_stop():
     except Exception as e:
         return jsonify({"ok": False, "message": str(e)}), 500
 
-# ========== تشغيل التطبيق ==========
+# ========== API أدوات النظام ==========
+
+@app.route("/api/system/restart", methods=["POST"])
+def system_restart():
+    """تنظيف الكاش وإعادة تشغيل النظام."""
+    def restart_sequence():
+        time.sleep(1) # Wait for response to be sent
+        print("🧹 Cleaning system...")
+        
+        # 1. Run cleanup script
+        import subprocess
+        import sys
+        import os
+        
+        try:
+            # Make sure script is executable (Linux only)
+            if os.name != 'nt':
+                subprocess.run(["chmod", "+x", "clean.sh"])
+                subprocess.run(["./clean.sh"], shell=True)
+            else:
+                # Windows fallback (just print)
+                print("   (Cleanup script skipped on Windows)")
+                
+        except Exception as e:
+            print(f"⚠️ Cleanup error: {e}")
+
+        # 2. Restart Application
+        print("🔄 Restarting Flask Application...")
+        stop_scheduler() # Stop threads first
+        
+        # Re-execute the current script
+        os.execl(sys.executable, sys.executable, *sys.argv)
+
+    # Run in thread to allow returning response first
+    threading.Thread(target=restart_sequence).start()
+    
+    return jsonify({"status": "success", "message": "جاري تنظيف الكاش وإعادة التشغيل... انتظر 10 ثواني"})
+
 
 if __name__ == "__main__":
     # تهيئة قاعدة البيانات

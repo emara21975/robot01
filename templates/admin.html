@@ -72,7 +72,8 @@
                             <line x1="9" y1="14" x2="15" y2="14"></line>
                         </svg>
                     </a>
-                    <button class="icon-btn" onclick="toggleRobot()" id="robot-toggle-header-btn" title="تشغيل/إيقاف الروبوت">
+                    <button class="icon-btn" onclick="toggleRobot()" id="robot-toggle-header-btn"
+                        title="تشغيل/إيقاف الروبوت">
                         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <path
@@ -147,6 +148,15 @@
                         </svg>
                         <span class="emergency-text">طوارئ</span>
                     </div>
+
+                    <div class="action-btn" onclick="systemRestart()" style="border-right-color: #f59e0b;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+                            <path d="M23 4v6h-6"></path>
+                            <path d="M1 20v-6h6"></path>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        <span style="color: #f59e0b;">إعادة تشغيل النظام</span>
+                    </div>
                 </div>
 
                 <!-- Settings Card -->
@@ -168,7 +178,8 @@
                         </div>
 
                         <label class="switch" for="auth-toggle">
-                            <input type="checkbox" id="auth-toggle" onchange="toggleAuthSettings()" aria-label="تفعيل نظام التعرف على الوجه">
+                            <input type="checkbox" id="auth-toggle" onchange="toggleAuthSettings()"
+                                aria-label="تفعيل نظام التعرف على الوجه">
                             <span class="slider round"></span>
                         </label>
                     </div>
@@ -198,8 +209,7 @@
                                 class="status-dot-dynamic {% if box_id % 2 != 0 %}dot-primary{% else %}dot-secondary{% endif %}"></span>
                             الصندوق {{ box_id }}
                         </span>
-                        <button class="icon-btn box-open-btn" onclick="openBox('{{ box_id }}')"
-                            title="فتح">🔓</button>
+                        <button class="icon-btn box-open-btn" onclick="openBox('{{ box_id }}')" title="فتح">🔓</button>
                     </div>
 
                     <div class="input-group">
@@ -210,17 +220,20 @@
 
                     <!-- إعدادات المخزون -->
                     <div class="stock-settings">
-                        <h4 class="stock-header {% if box_id % 2 != 0 %}header-accent-primary{% else %}header-accent-secondary{% endif %}">
+                        <h4
+                            class="stock-header {% if box_id % 2 != 0 %}header-accent-primary{% else %}header-accent-secondary{% endif %}">
                             📊 إدارة المخزون</h4>
 
                         <div class="stock-row">
                             <div class="stock-field">
                                 <label class="input-label" for="box{{ box_id }}-stock">المخزون الحالي</label>
-                                <input type="number" id="box{{ box_id }}-stock" class="modern-input" min="0" value="0" aria-label="المخزون الحالي للصندوق {{ box_id }}">
+                                <input type="number" id="box{{ box_id }}-stock" class="modern-input" min="0" value="0"
+                                    aria-label="المخزون الحالي للصندوق {{ box_id }}">
                             </div>
                             <div class="stock-field">
                                 <label class="input-label" for="box{{ box_id }}-dose">الجرعة لكل صرف</label>
-                                <input type="number" id="box{{ box_id }}-dose" class="modern-input" min="1" value="1" aria-label="الجرعة لكل صرف للصندوق {{ box_id }}">
+                                <input type="number" id="box{{ box_id }}-dose" class="modern-input" min="1" value="1"
+                                    aria-label="الجرعة لكل صرف للصندوق {{ box_id }}">
                             </div>
                         </div>
 
