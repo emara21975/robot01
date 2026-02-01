@@ -2,13 +2,23 @@
 import RPi.GPIO as GPIO
 import time
 
-GATE_PIN = 23
+
+import RPi.GPIO as GPIO
+import time
+
+# Ask for PIN
+try:
+    GATE_PIN = int(input("Enter GPIO PIN number (e.g. 23 for Box 1, 24 for Box 2): "))
+except ValueError:
+    print("Invalid Pin. Defaulting to 23")
+    GATE_PIN = 23
 
 # Setup
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(GATE_PIN, GPIO.OUT)
 pwm = GPIO.PWM(GATE_PIN, 50)
 pwm.start(0)
+
 
 def set_angle(angle):
     duty = 2 + (angle / 18)
