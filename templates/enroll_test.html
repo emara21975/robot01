@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 اختبار صفحة التسجيل</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+        .section {
+            background: rgba(0,0,0,0.2);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            margin-bottom: 15px;
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+            padding-bottom: 10px;
+        }
+        .camera-test {
+            background: black;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        img {
+            width: 100%;
+            display: block;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .btn-danger {
+            background: #f44336;
+        }
+        .info-box {
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .success { color: #4CAF50; font-weight: bold; }
+        .error { color: #f44336; font-weight: bold; }
+        .warning { color: #ff9800; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 تشخيص صفحة التسجيل</h1>
+        
+        <div class="section">
+            <h2>📹 اختبار الكاميرا</h2>
+            <div class="camera-test">
+                <img id="camera-feed" src="/video" alt="بث الكاميرا">
+            </div>
+            <div class="info-box">
+                <strong>الحالة:</strong> <span id="camera-status">جاري الفحص...</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🌐 فحص الاتصال</h2>
+            <button class="btn" onclick="testAPI()">🧪 اختبار API</button>
+            <button class="btn btn-danger" onclick="testEnrollAPI()">📸 اختبار التسجيل</button>
+            <div class="info-box" id="api-result">
+                انقر على الأزرار أعلاه لاختبار الاتصال...
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 معلومات النظام</h2>
+            <div class="info-box">
+                <strong>الصفحة الحالية:</strong> <span id="current-url"></span><br>
+                <strong>المتصفح:</strong> <span id="browser-info"></span><br>
+                <strong>حجم الشاشة:</strong> <span id="screen-size"></span><br>
+                <strong>حالة الكاميرا:</strong> <span id="video-status"></span>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔗 روابط سريعة</h2>
+            <button class="btn" onclick="location.href='/enroll'">📝 صفحة التسجيل الأصلية</button>
+            <button class="btn" onclick="location.href='/'">🏠 الصفحة الرئيسية</button>
+            <button class="btn" onclick="location.href='/patient'">👤 شاشة المريض</button>
+        </div>
+    </div>
+
+    <script>
+        // System Info
+        document.getElementById('current-url').textContent = window.location.href;
+        document.getElementById('browser-info').textContent = navigator.userAgent;
+        document.getElementById('screen-size').textContent = `${window.innerWidth} x ${window.innerHeight}`;
+
+        // Camera Status Check
+        const cameraImg = document.getElementById('camera-feed');
+        cameraImg.onload = function() {
+            document.getElementById('camera-status').innerHTML = '<span class="success">✅ الكاميرا تعمل بشكل صحيح</span>';
+            document.getElementById('video-status').innerHTML = '<span class="success">✅ متصل</span>';
+        };
+        cameraImg.onerror = function() {
+            document.getElementById('camera-status').innerHTML = '<span class="error">❌ خطأ في تحميل الكاميرا</span>';
+            document.getElementById('video-status').innerHTML = '<span class="error">❌ غير متصل</span>';
+        };
+
+        // Test Settings API
+        async function testAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.innerHTML = '⏳ جاري الاختبار...';
+            
+            try {
+                const response = await fetch('/api/settings');
+                const data = await response.json();
+                resultDiv.innerHTML = `<span class="success">✅ نجح!</span><br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (err) {
+                resultDiv.innerHTML = `<span class="error">❌ فشل: ${err.message}</span>`;
+            }
+        }
+
+        // Test Enroll API
+        async function testEnrollAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.innerHTML = '⏳ جاري اختبار التسجيل...';
+            
+            try {
+                const response = await fetch('/api/enroll_face', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: 'اختبار' })
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<span class="success">✅ ${data.message}</span>`;
+                } else {
+                    resultDiv.innerHTML = `<span class="warning">⚠️ ${data.message}</span>`;
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<span class="error">❌ خطأ: ${err.message}</span>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MEDIBOT OS | الإحصائيات</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%236366f1' rx='20' width='100' height='100'/><text x='50' y='68' font-size='50' text-anchor='middle' fill='white'>💊</text></svg>">
+
+    <style>
+        :root {
+            --bg-body: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.6);
+            --bg-card-hover: rgba(30, 41, 59, 0.8);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --primary: #6366f1;
+            --secondary: #ec4899;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 12px;
+            --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f1f5f9;
+            --bg-card: rgba(255, 255, 255, 0.85);
+            --bg-card-hover: rgba(255, 255, 255, 0.95);
+            --border-color: rgba(0, 0, 0, 0.1);
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --primary: #4f46e5;
+            --secondary: #db2777;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --accent: #0891b2;
+        }
+
+        [data-theme="light"] .sidebar {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="light"] .table-card {
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        [data-theme="light"] .logs-table th {
+            color: #475569;
+        }
+
+        [data-theme="light"] .logs-table tr:hover {
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-body);
+            background-image:
+                radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 80px;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 0;
+            z-index: 10;
+        }
+
+        .brand-logo {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 40px;
+            font-size: 1.5rem;
+        }
+
+        .nav-item {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            text-decoration: none;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: var(--bg-card);
+            color: var(--text-main);
+        }
+
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            left: -14px;
+            width: 4px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 0 4px 4px 0;
+        }
+
+        .nav-item svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .nav-bottom {
+            margin-top: auto;
+        }
+
+        /* Main */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .header-title h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--text-main), var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-title p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+        }
+
+        .stat-card.blue::before {
+            background: var(--accent);
+        }
+
+        .stat-card.green::before {
+            background: var(--success);
+        }
+
+        .stat-card.orange::before {
+            background: var(--warning);
+        }
+
+        .stat-card.purple::before {
+            background: var(--primary);
+        }
+
+        .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+        }
+
+        .stat-value {
+            font-size: 3rem;
+            font-weight: 800;
+            font-family: monospace;
+            margin-bottom: 8px;
+        }
+
+        .stat-card.blue .stat-value {
+            color: var(--accent);
+        }
+
+        .stat-card.green .stat-value {
+            color: var(--success);
+        }
+
+        .stat-card.orange .stat-value {
+            color: var(--warning);
+        }
+
+        .stat-card.purple .stat-value {
+            color: var(--primary);
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Tables */
+        .tables-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .table-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            overflow: hidden;
+        }
+
+        .table-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .table-header h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .table-header.green h3 {
+            color: var(--success);
+        }
+
+        .table-header.purple h3 {
+            color: var(--primary);
+        }
+
+        .logs-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .logs-table th,
+        .logs-table td {
+            padding: 14px 12px;
+            text-align: right;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9rem;
+        }
+
+        .logs-table th {
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .logs-table tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .badge-info {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        /* Footer */
+        .footer-branding {
+            text-align: center;
+            padding: 12px 20px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: auto;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .footer-branding span {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .footer-branding .sep {
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .tables-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: 60px;
+                flex-direction: row;
+                padding: 0 20px;
+                justify-content: space-between;
+                border-left: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .brand-logo {
+                margin-bottom: 0;
+                width: 40px;
+                height: 40px;
+            }
+
+            .nav-menu {
+                display: flex;
+                gap: 10px;
+            }
+
+            .nav-item {
+                margin-bottom: 0;
+            }
+
+            .nav-bottom {
+                display: none;
+            }
+
+            .main-content {
+                padding: 16px;
+            }
+
+            .stat-value {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand-logo">💊</div>
+            <nav class="nav-menu">
+                <a href="/" class="nav-item" title="لوحة التحكم">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                </a>
+                <a href="/patient" class="nav-item" title="شاشة المريض">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </a>
+                <a href="/statistics" class="nav-item active" title="الإحصائيات">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                </a>
+            </nav>
+            <div class="nav-bottom">
+                <div class="nav-item" onclick="toggleTheme()" title="تغيير الوضع">
+                    <span id="theme-icon">🌙</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="main-content">
+            <header class="header">
+                <div class="header-title">
+                    <h1>إحصائيات النظام</h1>
+                    <p>مراقبة أداء الروبوت وسجل العمليات</p>
+                </div>
+            </header>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card blue">
+                    <div class="stat-icon">💊</div>
+                    <div class="stat-value" id="total-doses">0</div>
+                    <div class="stat-label">إجمالي الجرعات</div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-icon">📅</div>
+                    <div class="stat-value" id="today-doses">0</div>
+                    <div class="stat-label">جرعات اليوم</div>
+                </div>
+                <div class="stat-card orange">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-value" id="success-rate">100%</div>
+                    <div class="stat-label">نسبة النجاح</div>
+                </div>
+                <div class="stat-card purple">
+                    <div class="stat-icon">⏰</div>
+                    <div class="stat-value" id="active-schedules">0</div>
+                    <div class="stat-label">جداول نشطة</div>
+                </div>
+            </div>
+
+            <!-- Tables -->
+            <div class="tables-grid">
+                <div class="table-card">
+                    <div class="table-header green">
+                        <span style="font-size: 1.5rem;">💊</span>
+                        <h3>سجل الجرعات المصروفة</h3>
+                    </div>
+                    <table class="logs-table">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>الوقت</th>
+                                <th>الصندوق</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="doses-body">
+                            <tr>
+                                <td colspan="4" class="empty-state">جاري التحميل...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-header purple">
+                        <span style="font-size: 1.5rem;">⚙️</span>
+                        <h3>سجل تحديثات الجداول</h3>
+                    </div>
+                    <table class="logs-table">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>الوقت</th>
+                                <th>الصندوق</th>
+                                <th>التفاصيل</th>
+                            </tr>
+                        </thead>
+                        <tbody id="updates-body">
+                            <tr>
+                                <td colspan="4" class="empty-state">جاري التحميل...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer-branding">
+                <span>مدرسة عبدالله بن علي المسند الثانوية للبنين</span> • مشروع الروبوت الذكي لتوزيع الأدوية • عمل
+                الطلاب:
+                محمد وليد عمارة &
+                عبد الله خالد
+                النعيمي <span class="sep">|</span> إشراف: هشام عبد الرحمان سالمي
+            </div>
+        </main>
+    </div>
+
+    <script>
+        async function loadStatistics() {
+            try {
+                const statsRes = await fetch('/api/statistics');
+                const stats = await statsRes.json();
+                document.getElementById('total-doses').textContent = stats.total_doses || 0;
+                document.getElementById('today-doses').textContent = stats.today_doses || 0;
+                document.getElementById('success-rate').textContent = (stats.success_rate || 100) + '%';
+
+                const schedulesRes = await fetch('/api/schedules');
+                const schedules = await schedulesRes.json();
+                let activeCount = 0;
+                for (let box in schedules) { if (schedules[box].enabled) activeCount++; }
+                document.getElementById('active-schedules').textContent = activeCount;
+            } catch (e) { console.error('Error:', e); }
+        }
+
+        async function loadLogs() {
+            try {
+                const response = await fetch('/api/logs?limit=50');
+                const logs = await response.json();
+                const doses = logs.filter(log => log.action === 'dispensed');
+                const updates = logs.filter(log => log.action === 'schedule_updated');
+
+                const dosesBody = document.getElementById('doses-body');
+                if (doses.length === 0) {
+                    dosesBody.innerHTML = '<tr><td colspan="4" class="empty-state">لم يتم صرف أي جرعات بعد</td></tr>';
+                } else {
+                    dosesBody.innerHTML = doses.slice(0, 10).map(log => {
+                        const date = new Date(log.timestamp);
+                        return `<tr>
+              <td>${date.toLocaleDateString('ar-SA')}</td>
+              <td>${date.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</td>
+              <td>الصندوق ${log.box_id}</td>
+              <td><span class="badge badge-success">تم ✓</span></td>
+            </tr>`;
+                    }).join('');
+                }
+
+                const updatesBody = document.getElementById('updates-body');
+                if (updates.length === 0) {
+                    updatesBody.innerHTML = '<tr><td colspan="4" class="empty-state">لا توجد تحديثات</td></tr>';
+                } else {
+                    updatesBody.innerHTML = updates.slice(0, 10).map(log => {
+                        const date = new Date(log.timestamp);
+                        return `<tr>
+              <td>${date.toLocaleDateString('ar-SA')}</td>
+              <td>${date.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</td>
+              <td>الصندوق ${log.box_id}</td>
+              <td><span class="badge badge-info">${log.notes || 'تحديث'}</span></td>
+            </tr>`;
+                    }).join('');
+                }
+            } catch (e) { console.error('Error:', e); }
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            if (html.getAttribute('data-theme') === 'light') {
+                html.removeAttribute('data-theme'); icon.textContent = '🌙'; localStorage.setItem('theme', 'dark');
+            } else {
+                html.setAttribute('data-theme', 'light'); icon.textContent = '☀️'; localStorage.setItem('theme', 'light');
+            }
+        }
+
+        (function () {
+            if (localStorage.getItem('theme') === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                document.getElementById('theme-icon').textContent = '☀️';
+            }
+        })();
+
+        loadStatistics();
+        loadLogs();
+        setInterval(loadStatistics, 10000);
+        setInterval(loadLogs, 10000);
+
+        // Auto Fullscreen on first interaction
+        function enterFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+            // Remove listener after first use
+            document.removeEventListener('click', enterFullscreen);
+            document.removeEventListener('touchstart', enterFullscreen);
+        }
+
+        // Check if not already in fullscreen
+        if (!document.fullscreenElement) {
+            document.addEventListener('click', enterFullscreen, { once: true });
+            document.addEventListener('touchstart', enterFullscreen, { once: true });
+        }
+    </script>
+</body>
+
+</html>
