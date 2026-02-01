@@ -128,6 +128,10 @@ def check_and_dispense():
                         
                         print("   🤖 بدء الحركة للأمام...")
                         if start_robot():
+                            # ✅ تعيين العلم: الروبوت تحرك للأمام
+                            import app
+                            app.robot_moved_forward = True
+                            
                             # الحركة لمدة أقصاها 5 ثواني
                             # لكن يتوقف فوراً لو اكتشف عقبة (سرير المريض)
                             OBSTACLE_THRESHOLD = 20  # سم - المسافة الآمنة

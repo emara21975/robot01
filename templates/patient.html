@@ -1277,15 +1277,16 @@
             if (safetyTimers[boxId]) clearTimeout(safetyTimers[boxId]);
 
             // ... rest of confirm logic
-            btnConfirm.innerHTML = '⏳ جاري الرجوع...';
+            btnConfirm.innerHTML = '⏳ جاري المعالجة...';
 
             try {
-                // 1. Return Home
+                // 1. Return Home (أو عدم الرجوع في حالة الطوارئ - يتم التحكم من السيرفر)
                 const res = await fetch('/return_home', { method: 'POST' });
                 const data = await res.json();
 
                 if (res.ok) {
-                    alert('شكراً لك! نتمنى لك الشفاء العاجل ❤️');
+                    // عرض الرسالة من السيرفر (قد تختلف بين الطوارئ والعادي)
+                    alert(data.status || 'شكراً لك! نتمنى لك الشفاء العاجل ❤️');
                     // Deactivate Confirmation Mode
                     activeDoses[boxId] = false;
                     updateUIState();
