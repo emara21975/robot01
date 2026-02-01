@@ -159,23 +159,30 @@ def set_servo_angle(pwm, angle):
     duty = 2 + (angle / 18)
     pwm.ChangeDutyCycle(duty)
 
-def smooth_move(pwm, start_angle, end_angle, steps=50):
+def smooth_move(pwm, start_angle, end_angle, steps=None):
     """حركة سلسة مع Easing (لمنع الحركة المفاجئة).
     
-    steps: عدد الخطوات (50 = أنعم، 30 = أسرع)
+    السرعة ثابتة: كل الحركات تأخذ نفس الوقت تقريباً لنفس المسافة.
+    عدد الخطوات يحسب تلقائياً بناءً على المسافة.
     
     IMPORTANT: يقوم بتطبيع الزوايا لمنع اللفات الزائدة
     """
     if pwm is None or not hasattr(pwm, 'ChangeDutyCycle'):
         print(f"[SIMULATION] Servo: {start_angle}° -> {end_angle}°")
-        time.sleep(steps * SERVO_DELAY)
+        time.sleep(abs(end_angle - start_angle) * SERVO_DELAY)
         return
     
     # 🛡️ تطبيع الزوايا لتكون بين 0-180 (حماية من اللفات الزائدة)
     start_angle = max(0, min(180, start_angle))
     end_angle = max(0, min(180, end_angle))
     
-    print(f"   🔄 smooth_move: {start_angle:.1f}° → {end_angle:.1f}° ({abs(end_angle - start_angle):.1f}° فرق)")
+    # 🎯 حساب عدد الخطوات بناءً على المسافة (سرعة ثابتة)
+    distance = abs(end_angle - start_angle)
+    if steps is None:
+        # سرعة ثابتة: 3 درجات لكل خطوة (معتدل)
+        steps = max(10, int(distance / 3))  # حد أدنى 10 خطوات
+    
+    print(f"   🔄 smooth_move: {start_angle:.1f}° → {end_angle:.1f}° ({distance:.1f}° فرق، {steps} خطوة)")
 
     for i in range(steps + 1):
         t = i / steps
