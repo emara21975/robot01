@@ -160,7 +160,7 @@ def set_servo_angle(pwm, angle):
     pwm.ChangeDutyCycle(duty)
 
 def smooth_move(pwm, start_angle, end_angle, steps=50):
-    """حركة سلسة مع Easing (لمنع الحركة المفاجئة).
+    """حركة خطية دقيقة بدون easing (للوصول الدقيق للزاوية المستهدفة).
     
     Args:
         pwm: كائن PWM
@@ -183,20 +183,21 @@ def smooth_move(pwm, start_angle, end_angle, steps=50):
     
     print(f"   🔄 smooth_move: {start_angle:.1f}° → {end_angle:.1f}° ({distance:.1f}° فرق، {steps} خطوة)")
 
+    # حركة خطية بسيطة (بدون easing) للدقة العالية
     for i in range(steps + 1):
-        t = i / steps
-        # Cosine easing for smooth acceleration/deceleration
-        eased_t = 0.5 - 0.5 * math.cos(math.pi * t)
-        current_angle = start_angle + (end_angle - start_angle) * eased_t
+        t = i / steps  # حركة خطية: 0.0 -> 1.0
+        current_angle = start_angle + (end_angle - start_angle) * t
         set_servo_angle(pwm, current_angle)
         time.sleep(SERVO_DELAY)
         
-    # تأكيد الزاوية النهائية
+    # تأكيد الزاوية النهائية مرتين للدقة
     set_servo_angle(pwm, end_angle)
-    time.sleep(0.1)
-    # إيقاف PWM لمنع الاهتزاز والحرارة (تحقق إضافي للسلامة)
-    if pwm is not None and hasattr(pwm, 'ChangeDutyCycle'):
-        pwm.ChangeDutyCycle(0)
+    time.sleep(0.2)  # انتظار أطول للاستقرار
+    set_servo_angle(pwm, end_angle)  # تأكيد ثاني
+    time.sleep(0.3)  # وقت كافي للوصول التام
+    
+    # إيقاف PWM لمنع الاهتزاز والحرارة
+    pwm.ChangeDutyCycle(0)
 
 def move_servo(pwm, target_angle):
     """تحريك السيرفو لزاوية معينة."""
