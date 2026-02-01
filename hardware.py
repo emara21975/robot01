@@ -471,13 +471,15 @@ def full_dispense_sequence(box_id):
         gate_pwm.ChangeDutyCycle(0) # إيقاف PWM
         print(f"   ✓ تم إغلاق البوابة")
 
-    # ======== 4. العودة للصفر ========
+    # ======== 4. العودة للصفر (نقطة ثابتة) ========
     print(f"\n📍 الخطوة 4: العودة للصفر واعادة التعيين")
     if HAS_GPIO and pwm_carousel:
+        # العودة دائماً لنقطة الصفر الثابتة (ZERO_ANGLE)
         smooth_move(pwm_carousel, current_carousel_angle, ZERO_ANGLE, steps=30)
         pwm_carousel.ChangeDutyCycle(0)
+        # إعادة تعيين المتغير ليكون مطابقاً للنقطة الثابتة
         current_carousel_angle = ZERO_ANGLE
-        print(f"   ✓ الكاروسيل في وضع الصفر")
+        print(f"   ✓ الكاروسيل في وضع الصفر ({ZERO_ANGLE}°)")
     
     print(f"   ⏳ انتظار 1 ثانية...")
     time.sleep(1)
