@@ -122,15 +122,15 @@ def check_and_dispense():
                     print(f"🔔 [{now.strftime('%H:%M:%S')}] تنبيه وحركة (قبل 30 ثانية)")
                     play_sound(SOUND_PRE_NOTIFY)
                     
-                    # تحريك الروبوت لمدة 3 ثواني
-                    try:
-                        from hardware import start_robot, stop_robot
-                        print("   🤖 تحرك للأمام (3 ثواني)...")
-                        if start_robot():
-                            time.sleep(3)
-                            stop_robot()
-                    except Exception as move_err:
-                        print(f"⚠️ فشل الحركة: {move_err}")
+                    # تحريك الروبوت لمدة 3 ثواني (تم تعطيله بناءً على الطلب)
+                    # try:
+                    #     from hardware import start_robot, stop_robot
+                    #     print("   🤖 تحرك للأمام (3 ثواني)...")
+                    #     if start_robot():
+                    #         time.sleep(3)
+                    #         stop_robot()
+                    # except Exception as move_err:
+                    #     print(f"⚠️ فشل الحركة: {move_err}")
 
                     pre_notified[box_id] = current_date_key
             
