@@ -12,7 +12,7 @@ import threading
 # ============ إعدادات السيرفو ============
 ZERO_ANGLE = 23      # نقطة الصفر المرجعية (تتطابق مع الصندوق 1)
 LOADING_ANGLE = 100  # زاوية أنبوب التحميل
-SERVO_DELAY = 0.03   # سرعة الحركة (0.03 = أبطأ وأنعم، 0.02 = سريع)
+SERVO_DELAY = 0.02   # سرعة الحركة (0.015 = سريع، 0.02 = متوسط، 0.03 = بطيء)
 
 # ============ إعدادات الصناديق (GPIO Direct Control) ============
 # كل صندوق له:
@@ -192,9 +192,9 @@ def smooth_move(pwm, start_angle, end_angle, steps=50):
         
     # تأكيد الزاوية النهائية مرتين للدقة
     set_servo_angle(pwm, end_angle)
-    time.sleep(0.2)  # انتظار أطول للاستقرار
+    time.sleep(0.3)  # انتظار أطول للاستقرار
     set_servo_angle(pwm, end_angle)  # تأكيد ثاني
-    time.sleep(0.3)  # وقت كافي للوصول التام
+    time.sleep(0.4)  # وقت كافي للوصول التام + التغلب على المقاومة
     
     # إيقاف PWM لمنع الاهتزاز والحرارة
     pwm.ChangeDutyCycle(0)
