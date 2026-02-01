@@ -528,13 +528,17 @@ def go_home_return():
             print(f"⚠️ خطأ في تشغيل الصوت: {sound_err}")
         
         # ✅ تحقق: هل الروبوت تحرك للأمام؟
-        if get_robot_moved_status():
+        robot_status = get_robot_moved_status()
+        print(f"🔍 /return_home: robot_moved_status = {robot_status}")
+        
+        if robot_status:
             # الصرف التلقائي - الروبوت تحرك → يجب أن يرجع
             print("🔙 الروبوت سيرجع للخلف (صرف تلقائي)")
             if return_home():
                  # Start Safety Timer (30 seconds)
                  threading.Thread(target=monitor_movement, args=(30,), daemon=True).start()
                  reset_robot_moved_status()  # إعادة تعيين
+                 print("✅ تم إعادة تعيين robot_moved_forward إلى False")
                  return jsonify({"status": "✓ شكراً لك! جاري الرجوع..."})
             else:
                  return jsonify({"status": "✗ فشل إرسال أمر الرجوع"}), 500

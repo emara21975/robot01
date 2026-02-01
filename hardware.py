@@ -470,9 +470,12 @@ def full_dispense_sequence(box_id):
     
     # أ) تدوير الكاروسيل
     if HAS_GPIO and pwm_carousel:
+        print(f"   🔍 الزاوية الحالية قبل التدوير: {current_carousel_angle}°")
+        print(f"   🎯 الزاوية المستهدفة: {carousel_angle}°")
         smooth_move(pwm_carousel, current_carousel_angle, carousel_angle, steps=30)
         current_carousel_angle = carousel_angle
         print(f"   ✓ تم تدوير الكاروسيل إلى {carousel_angle}°")
+        print(f"   ✓ current_carousel_angle محدّث إلى: {current_carousel_angle}°")
     
     # ب) انتظار ربع ثانية
     time.sleep(0.25)
@@ -494,6 +497,9 @@ def full_dispense_sequence(box_id):
 
     # ======== 4. العودة للصفر (نقطة ثابتة) ========
     print(f"\n📍 الخطوة 4: العودة للصفر واعادة التعيين")
+    print(f"   🔍 الزاوية الحالية قبل العودة: {current_carousel_angle}°")
+    print(f"   🎯 الزاوية المستهدفة (ZERO): {ZERO_ANGLE}°")
+    
     if HAS_GPIO and pwm_carousel:
         # العودة دائماً لنقطة الصفر الثابتة (ZERO_ANGLE)
         smooth_move(pwm_carousel, current_carousel_angle, ZERO_ANGLE, steps=30)
@@ -501,6 +507,7 @@ def full_dispense_sequence(box_id):
         # إعادة تعيين المتغير ليكون مطابقاً للنقطة الثابتة
         current_carousel_angle = ZERO_ANGLE
         print(f"   ✓ الكاروسيل في وضع الصفر ({ZERO_ANGLE}°)")
+        print(f"   ✓ current_carousel_angle محدّث إلى: {current_carousel_angle}°")
     
     print(f"   ⏳ انتظار 1 ثانية...")
     time.sleep(1)

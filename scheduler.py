@@ -134,6 +134,7 @@ def check_and_dispense():
                         if start_robot():
                             # ✅ تعيين العلم: الروبوت تحرك للأمام
                             robot_moved_forward = True
+                            print(f"   ✅ تم تعيين robot_moved_forward = True")
                             
                             # الحركة لمدة أقصاها 5 ثواني
                             # لكن يتوقف فوراً لو اكتشف عقبة (سرير المريض)
@@ -153,8 +154,12 @@ def check_and_dispense():
                             
                             stop_robot()
                             print(f"   ✓ توقف الروبوت (جاهز للصرف)")
+                        else:
+                            print(f"   ❌ فشل start_robot() - الروبوت لم يتحرك")
+                            print(f"   ⚠️ robot_moved_forward يبقى = {robot_moved_forward}")
                     except Exception as move_err:
                         print(f"⚠️ خطأ في الحركة: {move_err}")
+                        print(f"   ⚠️ robot_moved_forward الحالي = {robot_moved_forward}")
                     
                     pre_notified[box_id] = current_date_key
             
