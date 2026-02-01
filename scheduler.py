@@ -159,10 +159,10 @@ def check_and_dispense():
                 if last_time == current_date_key:
                     continue  # تم الصرف بالفعل
                 
-                # صرف الجرعة مع حركة الروبوت الكاملة
+                # صرف الجرعة (بدون حركة روبوت - الحركة تمت في التنبيه المسبق)
                 print(f"⏰ [{now.strftime('%H:%M:%S')}] حان موعد الصندوق {box_id}!")
                 
-                # استخدام التسلسل الكامل (مع حركة الروبوت)
+                # استخدام التسلسل الكامل (الصرف فقط - الروبوت وصل بالفعل عند -30 ثانية)
                 from hardware import full_dispense_sequence
                 success, message = full_dispense_sequence(box_id)
                 

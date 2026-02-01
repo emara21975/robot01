@@ -253,6 +253,15 @@ def dispense_dose(box_id):
     print(f"   ✓ زوايا: carousel={carousel_angle}°, gate={close_angle}°→{open_angle}°")
     
     try:
+        # 🛡️ حماية: إيقاف محركات الروبوت قبل تحريك الكاروسيل
+        # لمنع التداخل الكهربائي بين PWM الكاروسيل و Arduino
+        try:
+            stop_robot()
+            time.sleep(0.1)  # انتظار قصير للتأكد من إيقاف المحركات
+            print("   🛡️ تم إيقاف محركات الروبوت قبل تحريك الكاروسيل (حماية من التداخل)")
+        except Exception as safety_err:
+            print(f"   ⚠️ تحذير: {safety_err}")
+        
         # ======== 2. تدوير الكاروسيل ========
         print(f"\n🔄 الخطوة 2: تدوير الكاروسيل")
         
@@ -447,6 +456,15 @@ def full_dispense_sequence(box_id):
     gate_pwm = gate_pwms.get(box_id)
     carousel_angle = BOX_ANGLES.get(box_id, 0)
     
+    # 🛡️ حماية: إيقاف محركات الروبوت قبل تحريك الكاروسيل
+    # لمنع التداخل الكهربائي بين PWM الكاروسيل و Arduino
+    try:
+        stop_robot()
+        time.sleep(0.1)  # انتظار قصير للتأكد من إيقاف المحركات
+        print("   🛡️ تم إيقاف محركات الروبوت قبل تحريك الكاروسيل (حماية من التداخل)")
+    except Exception as safety_err:
+        print(f"   ⚠️ تحذير: {safety_err}")
+    
     # أ) تدوير الكاروسيل
     if HAS_GPIO and pwm_carousel:
         smooth_move(pwm_carousel, current_carousel_angle, carousel_angle, steps=30)
@@ -492,6 +510,12 @@ def full_dispense_sequence(box_id):
 
 def load_medicine():
     """تدوير الكاروسيل لوضع التحميل."""
+    # 🛡️ حماية: إيقاف محركات الروبوت قبل تحريك الكاروسيل
+    try:
+        stop_robot()
+        time.sleep(0.1)
+    except: pass
+    
     if HAS_GPIO and pwm_carousel:
         move_servo(pwm_carousel, LOADING_ANGLE)
         print(f"🧪 تم التدوير لزاوية التحميل: {LOADING_ANGLE}°")
@@ -500,6 +524,12 @@ def load_medicine():
 
 def go_home_zero():
     """إرجاع الكاروسيل لنقطة الصفر."""
+    # 🛡️ حماية: إيقاف محركات الروبوت قبل تحريك الكاروسيل
+    try:
+        stop_robot()
+        time.sleep(0.1)
+    except: pass
+    
     if HAS_GPIO and pwm_carousel:
         move_servo(pwm_carousel, ZERO_ANGLE)
         print(f"🔄 تم الرجوع لنقطة الصفر: {ZERO_ANGLE}°")
