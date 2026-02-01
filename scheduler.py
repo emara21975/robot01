@@ -109,14 +109,22 @@ def check_and_dispense():
             if 55 <= time_diff <= 65:  # بين 55-65 ثانية
                 camera_started_key = f"camera_{current_date_key}"
                 if pre_notified.get(camera_started_key) != current_date_key:
-                    print(f"📷 [{now.strftime('%H:%M:%S')}] تشغيل الكاميرا (قبل دقيقة)")
-                    try:
-                        play_sound(SOUND_CAMERA)
-                        from robot.camera.camera import camera
-                        if camera and not camera.is_running():
-                            camera.start()
-                    except Exception as cam_err:
-                        print(f"⚠️ خطأ في تشغيل الكاميرا: {cam_err}")
+                    # ✅ التحقق: هل نظام الكاميرا مفعّل؟
+                    from database import get_setting
+                    auth_enabled = str(get_setting("auth_enabled", "0")).strip() == "1"
+                    
+                    if auth_enabled:
+                        print(f"📷 [{now.strftime('%H:%M:%S')}] تشغيل الكاميرا (قبل دقيقة) - النظام مفعّل")
+                        try:
+                            play_sound(SOUND_CAMERA)
+                            from robot.camera.camera import camera
+                            if camera and not camera.is_running():
+                                camera.start()
+                        except Exception as cam_err:
+                            print(f"⚠️ خطأ في تشغيل الكاميرا: {cam_err}")
+                    else:
+                        print(f"📷 [{now.strftime('%H:%M:%S')}] تخطي تشغيل الكاميرا - النظام معطّل")
+                    
                     pre_notified[camera_started_key] = current_date_key
             
             # ====== 1. التنبيه المسبق والحركة الذكية (30 ثانية قبل الموعد) ======
@@ -189,10 +197,14 @@ def check_and_dispense():
                 
                 # ====== إيقاف الكاميرا بعد الصرف (لتوفير الموارد) ======
                 try:
-                    from robot.camera.camera import camera
-                    if camera and camera.is_running():
-                        print(f"📷 [{now.strftime('%H:%M:%S')}] إيقاف الكاميرا بعد الصرف")
-                        camera.stop()
+                    from database import get_setting
+                    auth_enabled = str(get_setting("auth_enabled", "0")).strip() == "1"
+                    
+                    if auth_enabled:
+                        from robot.camera.camera import camera
+                        if camera and camera.is_running():
+                            print(f"📷 [{now.strftime('%H:%M:%S')}] إيقاف الكاميرا بعد الصرف")
+                            camera.stop()
                 except Exception as cam_err:
                     print(f"⚠️ خطأ في إيقاف الكاميرا: {cam_err}")
             

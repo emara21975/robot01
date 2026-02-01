@@ -163,11 +163,19 @@ def smooth_move(pwm, start_angle, end_angle, steps=50):
     """حركة سلسة مع Easing (لمنع الحركة المفاجئة).
     
     steps: عدد الخطوات (50 = أنعم، 30 = أسرع)
+    
+    IMPORTANT: يقوم بتطبيع الزوايا لمنع اللفات الزائدة
     """
     if pwm is None or not hasattr(pwm, 'ChangeDutyCycle'):
         print(f"[SIMULATION] Servo: {start_angle}° -> {end_angle}°")
         time.sleep(steps * SERVO_DELAY)
         return
+    
+    # 🛡️ تطبيع الزوايا لتكون بين 0-180 (حماية من اللفات الزائدة)
+    start_angle = max(0, min(180, start_angle))
+    end_angle = max(0, min(180, end_angle))
+    
+    print(f"   🔄 smooth_move: {start_angle:.1f}° → {end_angle:.1f}° ({abs(end_angle - start_angle):.1f}° فرق)")
 
     for i in range(steps + 1):
         t = i / steps
@@ -188,10 +196,17 @@ def move_servo(pwm, target_angle):
     """تحريك السيرفو لزاوية معينة."""
     global current_carousel_angle, pwm_carousel
     
+    # 🛡️ تطبيع الزاوية المستهدفة
+    target_angle = max(0, min(180, target_angle))
+    
     if pwm == pwm_carousel and pwm_carousel is not None:
+        # 🛡️ تطبيع الزاوية الحالية (حماية من القيم الخاطئة)
+        current_carousel_angle = max(0, min(180, current_carousel_angle))
+        
         start_angle = current_carousel_angle
         smooth_move(pwm, start_angle, target_angle, steps=40)
         current_carousel_angle = target_angle
+        print(f"   ✓ current_carousel_angle = {current_carousel_angle}°")
     else:
         start_angle = 0
         if target_angle == 0: 
@@ -267,6 +282,10 @@ def dispense_dose(box_id):
         
         # ======== 2. تدوير الكاروسيل ========
         print(f"\n🔄 الخطوة 2: تدوير الكاروسيل")
+        
+        # 🛡️ تطبيع الزوايا قبل الحركة
+        current_carousel_angle = max(0, min(180, current_carousel_angle))
+        carousel_angle = max(0, min(180, carousel_angle))
         
         if pwm_carousel and current_carousel_angle != carousel_angle:
             print(f"   تدوير: {current_carousel_angle}° → {carousel_angle}°")
@@ -470,6 +489,10 @@ def full_dispense_sequence(box_id):
     
     # أ) تدوير الكاروسيل
     if HAS_GPIO and pwm_carousel:
+        # 🛡️ تطبيع الزوايا لمنع اللفات الزائدة
+        current_carousel_angle = max(0, min(180, current_carousel_angle))
+        carousel_angle = max(0, min(180, carousel_angle))
+        
         print(f"   🔍 الزاوية الحالية قبل التدوير: {current_carousel_angle}°")
         print(f"   🎯 الزاوية المستهدفة: {carousel_angle}°")
         smooth_move(pwm_carousel, current_carousel_angle, carousel_angle, steps=30)
@@ -497,6 +520,10 @@ def full_dispense_sequence(box_id):
 
     # ======== 4. العودة للصفر (نقطة ثابتة) ========
     print(f"\n📍 الخطوة 4: العودة للصفر واعادة التعيين")
+    
+    # 🛡️ تطبيع الزاوية الحالية قبل العودة (حماية من القيم الخاطئة)
+    current_carousel_angle = max(0, min(180, current_carousel_angle))
+    
     print(f"   🔍 الزاوية الحالية قبل العودة: {current_carousel_angle}°")
     print(f"   🎯 الزاوية المستهدفة (ZERO): {ZERO_ANGLE}°")
     
