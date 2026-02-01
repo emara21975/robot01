@@ -20,8 +20,8 @@ SERVO_DELAY = 0.02   # سرعة الحركة
 # - open_angle: زاوية الفتح
 # - close_angle: زاوية الإغلاق
 BOX_CONFIG = {
-    1: {'pin': 23, 'open_angle': 90, 'close_angle': 0},
-    2: {'pin': 24, 'open_angle': 90, 'close_angle': 0},
+    1: {'pin': 23, 'open_angle': 80, 'close_angle': 0},
+    2: {'pin': 24, 'open_angle': 80, 'close_angle': 0},
 }
 
 # ============ زوايا الكاروسيل لكل صندوق ============
@@ -139,6 +139,13 @@ def setup_gpio():
         set_servo_angle(pwm, config['close_angle'])
         time.sleep(0.3)
         pwm.ChangeDutyCycle(0)  # إيقاف PWM لمنع الاهتزاز
+    
+    # === CALIBRATION: إعادة الكاروسيل لنقطة الصفر عند التشغيل ===
+    print("   🔄 جاري معايرة الكاروسيل لنقطة الصفر...")
+    set_servo_angle(pwm_carousel, ZERO_ANGLE)
+    time.sleep(1.0) # وقت كافي للعودة
+    pwm_carousel.ChangeDutyCycle(0)
+    print("   ✓ تمت المعايرة: الكاروسيل في وضع الصفر")
     
     print(f"✓ تم تهيئة منافذ GPIO لـ {len(BOX_CONFIG)} صناديق")
     return True
