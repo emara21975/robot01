@@ -38,7 +38,7 @@ def play_sound(sound_path):
     try:
         # محاولة استخدام pygame
         try:
-            import pygame
+            import pygame  # type: ignore
             if not pygame.mixer.get_init():
                 pygame.mixer.init()
             pygame.mixer.music.load(sound_path)
@@ -116,23 +116,39 @@ def check_and_dispense():
                         print(f"⚠️ خطأ في تشغيل الكاميرا: {cam_err}")
                     pre_notified[camera_started_key] = current_date_key
             
-            # ====== 1. التنبيه المسبق والحركة (30 ثانية قبل الموعد) ======
+            # ====== 1. التنبيه المسبق والحركة الذكية (30 ثانية قبل الموعد) ======
             if 25 <= time_diff <= 35:  # بين 25-35 ثانية
                 if pre_notified.get(box_id) != current_date_key:
-                    print(f"🔔 [{now.strftime('%H:%M:%S')}] تنبيه وحركة (قبل 30 ثانية)")
+                    print(f"🔔 [{now.strftime('%H:%M:%S')}] تنبيه وحركة ذكية (قبل 30 ثانية)")
                     play_sound(SOUND_PRE_NOTIFY)
                     
-                    # تحريك الروبوت لمدة 3 ثواني
+                    # 🤖 الحركة الذكية للروبوت (مع كشف العقبات)
                     try:
-                        from hardware import start_robot, stop_robot
-                        print("   🤖 تحرك للأمام (3 ثواني)...")
+                        from hardware import start_robot, stop_robot, get_latest_distance
+                        
+                        print("   🤖 بدء الحركة للأمام...")
                         if start_robot():
-                            time.sleep(3)
+                            # الحركة لمدة أقصاها 5 ثواني
+                            # لكن يتوقف فوراً لو اكتشف عقبة (سرير المريض)
+                            OBSTACLE_THRESHOLD = 20  # سم - المسافة الآمنة
+                            MAX_MOVE_TIME = 5  # ثواني
+                            
+                            for i in range(MAX_MOVE_TIME):
+                                time.sleep(1)
+                                distance = get_latest_distance()
+                                
+                                if distance is not None and distance < OBSTACLE_THRESHOLD:
+                                    print(f"   🛑 اكتشاف عقبة على بعد {distance:.1f} سم - توقف!")
+                                    print(f"   ✅ وصل الروبوت للسرير")
+                                    break
+                                elif distance is not None:
+                                    print(f"   📏 المسافة: {distance:.1f} سم - استمرار...")
+                            
                             stop_robot()
-                            print("   ✓ توقف الروبوت")
+                            print(f"   ✓ توقف الروبوت (جاهز للصرف)")
                     except Exception as move_err:
-                        print(f"⚠️ فشل الحركة: {move_err}")
-
+                        print(f"⚠️ خطأ في الحركة: {move_err}")
+                    
                     pre_notified[box_id] = current_date_key
             
             # ====== 2. تحقق إذا حان الموعد (نفس الساعة والدقيقة) ======

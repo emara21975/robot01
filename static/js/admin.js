@@ -144,26 +144,21 @@ async function setTimer(boxId) {
         let isDispensing = false;
 
         timers[boxId] = setInterval(async () => {
-            if (timerCountdowns[boxId] > 0 && !isDispensing) {
+            if (timerCountdowns[boxId] > 0) {
                 timerCountdowns[boxId]--;
                 updateTimerDisplay(boxId);
 
-                if (timerCountdowns[boxId] <= 0 && !isDispensing) {
-                    // منع الاستدعاء المتكرر
-                    isDispensing = true;
-                    addLog(`🔔 حان موعد الجرعة للصندوق ${boxId}!`);
-
-                    try {
-                        await openBox(boxId);
-                    } catch (e) {
-                        addLog(`❌ خطأ في فتح الصندوق ${boxId}`);
-                    }
-
-                    // انتظار ثم إعادة حساب الموعد التالي
+                // ⚠️ تم إلغاء الصرف التلقائي من هنا
+                // scheduler.py (Python Backend) هو المسؤول الوحيد عن الصرف التلقائي
+                // admin.js فقط يعرض العداد التنازلي للمستخدم
+                
+                if (timerCountdowns[boxId] <= 0) {
+                    addLog(`⏰ حان موعد الجرعة للصندوق ${boxId} - الصرف التلقائي من السيرفر...`);
+                    
+                    // إعادة حساب الموعد التالي بعد 5 ثواني
                     setTimeout(() => {
                         calculateNextSchedule(boxId);
-                        isDispensing = false;  // إعادة تفعيل المؤقت
-                    }, 3000);
+                    }, 5000);
                 }
             }
         }, 1000);
@@ -375,24 +370,17 @@ async function loadSchedules() {
                 // Start timer logic
                 if (timers[boxId]) clearInterval(timers[boxId]);
 
-                let isDispensing = false;
                 timers[boxId] = setInterval(async () => {
-                    if (timerCountdowns[boxId] > 0 && !isDispensing) {
+                    if (timerCountdowns[boxId] > 0) {
                         timerCountdowns[boxId]--;
                         updateTimerDisplay(boxId);
 
-                        if (timerCountdowns[boxId] <= 0 && !isDispensing) {
-                            isDispensing = true;
-                            addLog(`🔔 حان موعد الجرعة للصندوق ${boxId}!`);
-                            try {
-                                await openBox(boxId);
-                            } catch (e) {
-                                addLog(`❌ خطأ في فتح الصندوق ${boxId}`);
-                            }
+                        // ⚠️ الصرف التلقائي من scheduler.py فقط
+                        if (timerCountdowns[boxId] <= 0) {
+                            addLog(`⏰ حان موعد الجرعة للصندوق ${boxId} - الصرف التلقائي من السيرفر...`);
                             setTimeout(() => {
                                 calculateNextSchedule(boxId);
-                                isDispensing = false;
-                            }, 3000);
+                            }, 5000);
                         }
                     }
                 }, 1000);
