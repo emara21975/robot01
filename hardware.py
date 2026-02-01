@@ -12,7 +12,7 @@ import threading
 # ============ إعدادات السيرفو ============
 ZERO_ANGLE = 0       # نقطة الصفر المرجعية
 LOADING_ANGLE = 100  # زاوية أنبوب التحميل
-SERVO_DELAY = 0.02   # سرعة الحركة
+SERVO_DELAY = 0.03   # سرعة الحركة (0.03 = أبطأ وأنعم، 0.02 = سريع)
 
 # ============ إعدادات الصناديق (GPIO Direct Control) ============
 # كل صندوق له:
@@ -159,8 +159,11 @@ def set_servo_angle(pwm, angle):
     duty = 2 + (angle / 18)
     pwm.ChangeDutyCycle(duty)
 
-def smooth_move(pwm, start_angle, end_angle, steps=30):
-    """حركة سلسة مع Easing (لمنع الحركة المفاجئة)."""
+def smooth_move(pwm, start_angle, end_angle, steps=50):
+    """حركة سلسة مع Easing (لمنع الحركة المفاجئة).
+    
+    steps: عدد الخطوات (50 = أنعم، 30 = أسرع)
+    """
     if pwm is None or not hasattr(pwm, 'ChangeDutyCycle'):
         print(f"[SIMULATION] Servo: {start_angle}° -> {end_angle}°")
         time.sleep(steps * SERVO_DELAY)
