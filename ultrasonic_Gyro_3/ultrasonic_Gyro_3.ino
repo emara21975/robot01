@@ -78,20 +78,20 @@ void stopRobot() {
 void setMotorSpeed(int leftSpeed, int rightSpeed, bool forward) {
   // Set direction for Motor A (Left)
   if (forward) {
-    digitalWrite(IN1, LOW);  // Inverted: Was HIGH
-    digitalWrite(IN2, HIGH); // Inverted: Was LOW
+    digitalWrite(IN1, HIGH);
+    digitalWrite(IN2, LOW);
   } else {
-    digitalWrite(IN1, HIGH); // Inverted
-    digitalWrite(IN2, LOW);  // Inverted
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, HIGH);
   }
 
   // Set direction for Motor B (Right)
   if (forward) {
-    digitalWrite(IN3, LOW);  // Inverted: Was HIGH
-    digitalWrite(IN4, HIGH); // Inverted: Was LOW
+    digitalWrite(IN3, HIGH);
+    digitalWrite(IN4, LOW);
   } else {
-    digitalWrite(IN3, HIGH); // Inverted
-    digitalWrite(IN4, LOW);  // Inverted
+    digitalWrite(IN3, LOW);
+    digitalWrite(IN4, HIGH);
   }
 
   // Set speed for both motors
@@ -100,46 +100,13 @@ void setMotorSpeed(int leftSpeed, int rightSpeed, bool forward) {
 }
 
 void forwardPID(int baseSpeed) {
-  // PID Disabled for debugging - Force straight movement
+  // PID Disabled - Force straight movement
   setMotorSpeed(baseSpeed, baseSpeed, true);
-
-  /*
-  // Original PID Code (Disabled)
-  mpu.update();
-  float yaw = normalize(mpu.getAngleZ());
-  float error = normalize(yaw - targetYaw);
-
-  errorSum += error;
-  errorSum = constrain(errorSum, -1000, 1000);  // Prevent windup
-  float derivative = error - lastError;
-  lastError = error;
-
-  float correction = Kp * error + Ki * errorSum + Kd * derivative;
-
-  int leftSpeed = baseSpeed - correction;
-  int rightSpeed = baseSpeed + correction;
-
-  setMotorSpeed(leftSpeed, rightSpeed, true);
-  */
 }
 
 void backwardPID(int baseSpeed) {
-  mpu.update();
-  float yaw = normalize(mpu.getAngleZ());
-  float error = normalize(yaw - targetYaw);
-
-  errorSum += error;
-  errorSum = constrain(errorSum, -1000, 1000); // Prevent windup
-  float derivative = error - lastError;
-  lastError = error;
-
-  float correction = Kp * error + Ki * errorSum + Kd * derivative;
-
-  // Reverse correction for backward
-  int leftSpeed = baseSpeed + correction;
-  int rightSpeed = baseSpeed - correction;
-
-  setMotorSpeed(leftSpeed, rightSpeed, false);
+  // PID Disabled - Force straight backward movement
+  setMotorSpeed(baseSpeed, baseSpeed, false);
 }
 
 // ============ Setup ============
