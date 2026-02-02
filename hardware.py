@@ -299,6 +299,12 @@ def dispense_dose(box_id):
             smooth_move(pwm_carousel, current_carousel_angle, carousel_angle, steps=60)
             time.sleep(0.3)  # تثبيت
             current_carousel_angle = carousel_angle
+            # 🛡️ إيقاف الروبوت مرة أخرى بعد حركة الكاروسيل (منع استمرار الحركة)
+            try:
+                stop_robot()
+                time.sleep(0.1)
+                print("   🛡️ تأكيد إيقاف محركات الروبوت بعد حركة الكاروسيل")
+            except: pass
         else:
             print(f"   ✓ الكاروسيل في الموضع ({carousel_angle}°)")
         
@@ -507,6 +513,12 @@ def full_dispense_sequence(box_id):
         current_carousel_angle = carousel_angle
         print(f"   ✓ تم تدوير الكاروسيل إلى {carousel_angle}°")
         print(f"   ✓ current_carousel_angle محدّث إلى: {current_carousel_angle}°")
+        # 🛡️ إيقاف الروبوت بعد حركة الكاروسيل (منع التداخل)
+        try:
+            stop_robot()
+            time.sleep(0.1)
+            print("   🛡️ تأكيد إيقاف محركات الروبوت بعد حركة الكاروسيل")
+        except: pass
     
     # ب) انتظار ربع ثانية
     time.sleep(0.25)

@@ -38,8 +38,8 @@ float targetYaw = 0;
 
 // -------- Speed --------
 int currentSpeed = 0;
-int targetSpeed = 150;
-int speedStep = 5;
+int targetSpeed = 220;  // 🚀 زيادة السرعة من 150 إلى 220 (86% قوة)
+int speedStep = 8;      // 🚀 زيادة التسارع من 5 إلى 8
 
 // -------- Safety --------
 unsigned long lastCommandTime = 0;
