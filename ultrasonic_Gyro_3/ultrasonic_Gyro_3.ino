@@ -151,7 +151,14 @@ void setup() {
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
 
-  stopCoast();
+  // 🛑 CRITICAL: إيقاف فوري وقوي للموتورات (منع الحركة التلقائية)
+  stopBrake();  // فرملة قوية أولاً
+  delay(200);
+  stopCoast();  // ثم استرخاء
+  
+  // 🔒 التأكد من حالة IDLE
+  state = IDLE;
+  currentSpeed = 0;
 
   // MPU6050 init
   Wire.begin();
@@ -159,6 +166,11 @@ void setup() {
 
   delay(1000);
   mpu.calcOffsets();
+  
+  // 🛑 إيقاف نهائي بعد calibration (منع أي حركة بسبب noise)
+  stopBrake();
+  delay(100);
+  stopCoast();
 
   Serial.println("READY");
   Serial.println("Commands: START, STOP, RETURN");
@@ -255,6 +267,8 @@ void loop() {
   } else {
     // IDLE
     stopCoast();
+    // 🔒 تأكيد إيقاف currentSpeed (منع أي حركة متبقية)
+    currentSpeed = 0;
   }
 
   delay(20);
