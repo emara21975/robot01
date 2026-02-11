@@ -36,7 +36,7 @@ def _run_watchdog():
 threading.Thread(target=_run_watchdog, daemon=True).start()
 
 # ============ إعدادات السيرفو ============
-ZERO_ANGLE = 23      # نقطة الصفر المرجعية (تتطابق مع الصندوق 1)
+ZERO_ANGLE = 17      # نقطة الصفر المرجعية (تتطابق مع الصندوق 1)
 LOADING_ANGLE = 100  # زاوية أنبوب التحميل
 SERVO_DELAY = 0.02   # سرعة الحركة (0.015 = سريع، 0.02 = متوسط، 0.03 = بطيء)
 MIN_MOVE_INTERVAL = 0.5  # ⚡ حماية: أقل وقت بين حركتين للسيرفو (ثواني)
