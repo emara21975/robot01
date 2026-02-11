@@ -461,21 +461,8 @@ def open_box():
     
                 log_dose(box, 'dispensed', 'success', f"{auth_msg} - تم الصرف")
                 
-<<<<<<< HEAD
-=======
                 # الصوت سيعمل عند ضغط المريض على "تم أخذ الدواء"
-                
-                # ✅ العودة التلقائية لوضع الصندوق 1 (Home Position)
-                # مع انتظار إغلاق الباب أولاً (سلامة الميكانيكا)
-                try:
-                    print("⏳ انتظار 2 ثانية للتأكد من إغلاق الباب...")
-                    time.sleep(2)  # انتظار إغلاق الباب بالكامل
-                    go_home_zero()
-                    print("🏠 تم إرجاع الكاروسيل للصندوق 1 تلقائياً (بعد التأكد من الإغلاق)")
-                except Exception as home_err:
-                    print(f"⚠️ خطأ في العودة للصفر: {home_err}")
-                
->>>>>>> 7bb6203313304bb920a8e7a4bc132c55be3998bf
+                # ملاحظة: العودة للصفر تتم تلقائياً داخل hardware.dispense_dose الآن
                 response = {"status": f"✓ {message}"}
                 if warning_msg:
                     response["warning_message"] = warning_msg
