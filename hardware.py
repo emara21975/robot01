@@ -422,7 +422,12 @@ def dispense_dose(box_id):
         print(f"↙️ الخطوة 6: إغلاق البوابة")
         smooth_move(gate_pwm, open_angle, close_angle, steps=30)
         
-        # 7. التسجيل
+        # 7. العودة للصفر (إلزامي)
+        print(f"🔄 الخطوة 7: العودة للصفر")
+        _return_carousel_zero()
+        time.sleep(1)
+        
+        # 8. التسجيل
         try:
             from database import log_dose
             log_dose(box_id, 'dispensed', 'success', f'صرف جرعة - الصندوق {box_id}')
@@ -551,18 +556,13 @@ def full_dispense_sequence(box_id):
     print(f"\n📍 الخطوة 3: الصرف من الصندوق {box_id}")
     success, message = dispense_dose(box_id)
     
+    # ملاحظة: الكاروسيل يعود للصفر تلقائياً داخل dispense_dose
+    
     if not success:
         print(f"   ❌ فشل الصرف: {message}")
         return False, message
     
     print(f"   ✓ {message}")
-
-    # ======== 4. العودة للصفر ========
-    print(f"\n📍 الخطوة 4: العودة للصفر")
-    _return_carousel_zero()
-    
-    print(f"   ⏳ انتظار 1 ثانية...")
-    time.sleep(1)
 
     print(f"\n✅ انتهى الصرف. في انتظار ضغط المريض للعودة.")
     return True, "تم الصرف بنجاح - في انتظار المريض"

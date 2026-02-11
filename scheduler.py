@@ -134,25 +134,18 @@ def check_and_dispense():
             # ====== 1. التنبيه المسبق والحركة الذكية (30 ثانية قبل الموعد) ======
             if 25 <= time_diff <= 35:  # بين 25-35 ثانية
                 if pre_notified.get(box_id) != current_date_key:
-<<<<<<< HEAD
                     # فحص النظام قبل الحركة
                     if robot_state.is_busy():
                         print(f"⏳ النظام مشغول - تخطي التنبيه المسبق")
                         continue
                     
-                    print(f"🔔 [{now.strftime('%H:%M:%S')}] تنبيه وحركة (قبل 30 ثانية)")
+                    print(f"🔔 [{now.strftime('%H:%M:%S')}] تنبيه وحركة ذكية (قبل 30 ثانية)")
                     play_sound(SOUND_PRE_NOTIFY)
                     
                     # تغيير الحالة إلى MOVING
                     robot_state.set(RobotState.MOVING)
                     
-                    # تحريك الروبوت لمدة 3 ثواني
-=======
-                    print(f"🔔 [{now.strftime('%H:%M:%S')}] تنبيه وحركة ذكية (قبل 30 ثانية)")
-                    play_sound(SOUND_PRE_NOTIFY)
-                    
                     # 🤖 الحركة الذكية للروبوت (مع كشف العقبات)
->>>>>>> 7bb6203313304bb920a8e7a4bc132c55be3998bf
                     try:
                         from hardware import start_robot, stop_robot, get_latest_distance
                         global robot_moved_forward
