@@ -19,7 +19,8 @@ from database import (
 from hardware import (
     HAS_GPIO, setup_gpio, dispense_dose, load_medicine, 
     go_home_zero, start_robot, stop_robot, get_robot_status,
-    is_arduino_connected, connect_arduino, return_home
+    is_arduino_connected, connect_arduino, return_home,
+    safe_recovery, get_hardware_status
 )
 
 # استيراد نظام الجدولة
@@ -459,8 +460,6 @@ def open_box():
     
                 log_dose(box, 'dispensed', 'success', f"{auth_msg} - تم الصرف")
                 
-                # الصوت سيعمل عند ضغط المريض على "تم أخذ الدواء"
-                
                 response = {"status": f"✓ {message}"}
                 if warning_msg:
                     response["warning_message"] = warning_msg
@@ -470,11 +469,19 @@ def open_box():
             else:
                 return jsonify({"status": f"✗ {message}"}), 400
         finally:
-             # Always reset to IDLE after dispense attempt
-             robot_state.set(RobotState.IDLE)
+             # الانتقال لـ WAIT_CONFIRM بعد الصرف الناجح، أو IDLE عند الفشل
+             if robot_state.current == RobotState.DISPENSING:
+                 robot_state.set(RobotState.WAIT_CONFIRM)
+             elif robot_state.current != RobotState.WAIT_CONFIRM:
+                 robot_state.set(RobotState.IDLE)
             
     except Exception as e:
-        robot_state.set(RobotState.IDLE)
+        # استرداد آمن عند الخطأ
+        try:
+            safe_recovery()
+        except:
+            pass
+        robot_state.force_idle(f"open_box error: {e}")
         return jsonify({"status": f"✗ خطأ: {str(e)}"}), 500
 
 
@@ -511,13 +518,31 @@ def go_home_return():
         except Exception as sound_err:
             print(f"⚠️ خطأ في تشغيل الصوت: {sound_err}")
         
+        # تغيير الحالة إلى RETURNING
+        if robot_state.current in [RobotState.WAIT_CONFIRM, RobotState.IDLE,
+                                    RobotState.DISPENSING]:
+            robot_state.set(RobotState.RETURNING)
+        
         if return_home():
              # Start Safety Timer (30 seconds)
              threading.Thread(target=monitor_movement, args=(30,), daemon=True).start()
+             
+             # إطلاق قفل العملية
+             robot_state.release_operation()
+             
+             # جدولة العودة لـ IDLE بعد 10 ثواني (وقت كافي للعودة)
+             def _finish_return():
+                 time.sleep(10)
+                 if robot_state.current == RobotState.RETURNING:
+                     robot_state.force_idle("return home completed")
+             threading.Thread(target=_finish_return, daemon=True).start()
+             
              return jsonify({"status": "✓ شكراً لك! جاري الرجوع..."})
         else:
+             robot_state.force_idle("return_home failed")
              return jsonify({"status": "✗ فشل إرسال أمر الرجوع"}), 500
     except Exception as e:
+        robot_state.force_idle(f"return_home error: {e}")
         return jsonify({"status": f"✗ خطأ: {str(e)}"}), 500
 
 
@@ -573,13 +598,16 @@ def robot_status():
 # ========== API حالة النظام ==========
 @app.route("/state")
 def get_state():
-    """Get current robot state"""
-    return jsonify({
-        "state": robot_state.current,
-        "is_busy": robot_state.is_busy(),
-        "can_verify": robot_state.can_verify(),
-        "can_dispense": robot_state.can_dispense()
-    })
+    """Get current robot state with full details"""
+    info = robot_state.get_info()
+    info["can_verify"] = robot_state.can_verify()
+    info["can_dispense"] = robot_state.can_dispense()
+    return jsonify(info)
+
+@app.route("/api/hardware/status")
+def hw_status():
+    """Get hardware health status"""
+    return jsonify(get_hardware_status())
 
 # ========== API التحكم اليدوي (لصفحة الاختبار) ==========
 
@@ -757,6 +785,9 @@ if __name__ == "__main__":
     # تهيئة GPIO على Raspberry Pi
     setup_gpio() # Safe to call even if HAS_GPIO is False (handled internally)
     
+    # تأكيد اكتمال التهيئة
+    robot_state.mark_initialized()
+    
     # تشغيل نظام الجدولة التلقائية
     start_scheduler()
     
@@ -765,6 +796,7 @@ if __name__ == "__main__":
     print("=" * 50)
     print(f"GPIO متاح: {HAS_GPIO}")
     print(f"الجدولة التلقائية: {'✅ تعمل' if is_scheduler_running() else '❌ متوقفة'}")
+    print(f"State Machine: {robot_state.current}")
     print("العنوان: http://0.0.0.0:5000")
     print("اضغط Ctrl+C للإيقاف")
     print("=" * 50)

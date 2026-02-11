@@ -62,12 +62,17 @@ def check_and_dispense():
     """
     فحص الجداول وتنفيذ الجرعات إذا حان الموعد.
     تُستدعى كل 10 ثواني للتحقق من التنبيهات.
+    يتحقق من State Machine قبل بدء أي عملية.
     """
     from database import get_all_schedules
-    from hardware import dispense_dose
     from database import log_dose
+    from robot.state_machine import robot_state, RobotState
     
     try:
+        # === فحص إذا كان النظام مشغول ===
+        if robot_state.is_busy():
+            return  # تخطي - النظام يعمل على عملية أخرى
+        
         now = datetime.now()
         current_day = now.weekday()  # 0=Monday, 6=Sunday
         # تحويل لنظام JavaScript (0=Sunday)
@@ -101,7 +106,6 @@ def check_and_dispense():
             
             current_date_key = f"{now.date()}-{target_hour}-{target_minute}"
             
-            # ====== 0. تشغيل الكاميرا (60 ثانية قبل الموعد) ======
             # ====== 0. تشغيل الكاميرا (1 دقيقة قبل الموعد) ======
             if 55 <= time_diff <= 65:  # بين 55-65 ثانية
                 camera_started_key = f"camera_{current_date_key}"
@@ -119,8 +123,16 @@ def check_and_dispense():
             # ====== 1. التنبيه المسبق والحركة (30 ثانية قبل الموعد) ======
             if 25 <= time_diff <= 35:  # بين 25-35 ثانية
                 if pre_notified.get(box_id) != current_date_key:
+                    # فحص النظام قبل الحركة
+                    if robot_state.is_busy():
+                        print(f"⏳ النظام مشغول - تخطي التنبيه المسبق")
+                        continue
+                    
                     print(f"🔔 [{now.strftime('%H:%M:%S')}] تنبيه وحركة (قبل 30 ثانية)")
                     play_sound(SOUND_PRE_NOTIFY)
+                    
+                    # تغيير الحالة إلى MOVING
+                    robot_state.set(RobotState.MOVING)
                     
                     # تحريك الروبوت لمدة 3 ثواني
                     try:
@@ -132,6 +144,9 @@ def check_and_dispense():
                             print("   ✓ توقف الروبوت")
                     except Exception as move_err:
                         print(f"⚠️ فشل الحركة: {move_err}")
+                    
+                    # العودة لـ IDLE بعد الحركة
+                    robot_state.force_idle("pre-notify movement done")
 
                     pre_notified[box_id] = current_date_key
             
@@ -143,21 +158,49 @@ def check_and_dispense():
                 if last_time == current_date_key:
                     continue  # تم الصرف بالفعل
                 
-                # صرف الجرعة مع حركة الروبوت الكاملة
-                print(f"⏰ [{now.strftime('%H:%M:%S')}] حان موعد الصندوق {box_id}!")
+                # فحص النظام قبل الصرف
+                if robot_state.is_busy():
+                    print(f"⏳ النظام مشغول ({robot_state.current}) - تأجيل صرف الصندوق {box_id}")
+                    continue
                 
-                # استخدام التسلسل الكامل (مع حركة الروبوت)
-                from hardware import full_dispense_sequence
-                success, message = full_dispense_sequence(box_id)
+                # الحصول على قفل العملية
+                op_id = robot_state.acquire_operation(timeout=5)
+                if not op_id:
+                    print(f"⚠️ فشل الحصول على قفل العملية - تخطي الصندوق {box_id}")
+                    continue
                 
-                if success:
-                    last_dispensed[box_id] = current_date_key
-                    log_dose(box_id, 'auto_dispensed', 'success', f'جرعة تلقائية - {message}')
-                    print(f"✅ تم صرف جرعة من الصندوق {box_id}")
-                    # صوت الشكر سيعمل عند ضغط المريض على "تم أخذ الدواء"
-                else:
-                    log_dose(box_id, 'auto_dispensed', 'failed', message)
-                    print(f"❌ فشل صرف جرعة من الصندوق {box_id}: {message}")
+                try:
+                    # صرف الجرعة
+                    print(f"⏰ [{now.strftime('%H:%M:%S')}] حان موعد الصندوق {box_id}! [op:{op_id}]")
+                    
+                    # تغيير الحالة إلى DISPENSING
+                    robot_state.set(RobotState.DISPENSING)
+                    
+                    # استخدام التسلسل الكامل
+                    from hardware import full_dispense_sequence
+                    success, message = full_dispense_sequence(box_id)
+                    
+                    if success:
+                        last_dispensed[box_id] = current_date_key
+                        log_dose(box_id, 'auto_dispensed', 'success',
+                                 f'جرعة تلقائية [op:{op_id}] - {message}')
+                        print(f"✅ تم صرف جرعة من الصندوق {box_id}")
+                        
+                        # تغيير الحالة إلى WAIT_CONFIRM
+                        robot_state.set(RobotState.WAIT_CONFIRM)
+                    else:
+                        log_dose(box_id, 'auto_dispensed', 'failed', message)
+                        print(f"❌ فشل صرف جرعة من الصندوق {box_id}: {message}")
+                        # العودة لـ IDLE عند الفشل
+                        robot_state.force_idle(f"dispense failed: {message}")
+                
+                except Exception as dispense_err:
+                    print(f"❌ خطأ في عملية الصرف: {dispense_err}")
+                    robot_state.force_idle(f"dispense error: {dispense_err}")
+                finally:
+                    # إطلاق قفل العملية (إلا إذا في WAIT_CONFIRM)
+                    if robot_state.current != RobotState.WAIT_CONFIRM:
+                        robot_state.release_operation()
                 
                 # ====== إيقاف الكاميرا بعد الصرف (لتوفير الموارد) ======
                 try:
@@ -169,10 +212,8 @@ def check_and_dispense():
                     print(f"⚠️ خطأ في إيقاف الكاميرا: {cam_err}")
             
             # ====== 3. تنبيه فوات الموعد (بعد 5 دقائق من الموعد بدون أخذ) ======
-            # إذا مر الموعد بـ 5 دقائق ولم يتم الصرف
-            if -300 <= time_diff < -280:  # بين 280-300 ثانية بعد الموعد (حوالي 5 دقائق)
+            if -300 <= time_diff < -280:  # بين 280-300 ثانية بعد الموعد
                 if missed_notified.get(box_id) != current_date_key:
-                    # تحقق إذا لم يتم الصرف
                     if last_dispensed.get(box_id) != current_date_key:
                         print(f"⚠️ [{now.strftime('%H:%M:%S')}] فات موعد الصندوق {box_id}!")
                         play_sound(SOUND_MISSED)
