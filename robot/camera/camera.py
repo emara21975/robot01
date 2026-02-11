@@ -124,8 +124,10 @@ class Camera:
                 if self.picam2:
                     frame = self.picam2.capture_array()
                     if frame is not None and frame.size > 0:
-                        with self.lock:
-                            self.frame = frame
+                            with self.lock:
+                                self.frame = frame
+                    # ⚡ PERFORMANCE: Limit capture FPS to ~20 to save CPU
+                    time.sleep(0.05)
             except Exception as e:
                 print(f"⚠️ Camera capture error: {e}")
                 time.sleep(1)

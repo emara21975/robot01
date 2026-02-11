@@ -12,10 +12,38 @@ import threading
 # ============ Hardware Lock (يمنع عمليتين متزامنتين على السيرفو) ============
 _hw_lock = threading.Lock()
 
+# ============ Watchdog Thread (لمراقبة حالة الأجهزة) ============
+def _run_watchdog():
+    """مراقب الخلفية لإنعاش اتصال الأردوينو وضمان استقرار النظام."""
+    while True:
+        time.sleep(30)
+        try:
+            # 1. إنعاش اتصال الأردوينو إذا فقد
+            if not is_arduino_connected():
+                print("🐶 Watchdog: إعادة اتصال الأردوينو...")
+                connect_arduino()
+                
+            # 2. تفريغ المخزن المؤقت لمنع تراكم البيانات
+            if is_arduino_connected():
+                try:
+                    arduino.reset_input_buffer()
+                except: pass
+                
+        except Exception as e:
+            print(f"🐶 Watchdog Error: {e}")
+
+# تشغيل المراقب في الخلفية
+threading.Thread(target=_run_watchdog, daemon=True).start()
+
 # ============ إعدادات السيرفو ============
 ZERO_ANGLE = 23      # نقطة الصفر المرجعية (تتطابق مع الصندوق 1)
 LOADING_ANGLE = 100  # زاوية أنبوب التحميل
 SERVO_DELAY = 0.02   # سرعة الحركة (0.015 = سريع، 0.02 = متوسط، 0.03 = بطيء)
+MIN_MOVE_INTERVAL = 0.5  # ⚡ حماية: أقل وقت بين حركتين للسيرفو (ثواني)
+FACE_FRESH_TIMEOUT = 5   # ⚡ حماية: أقصى مدة لاعتبار الوجه "حياً" (ثواني)
+
+_last_servo_move = 0
+
 
 # ============ إعدادات الصناديق (GPIO Direct Control) ============
 # كل صندوق له:
@@ -112,6 +140,68 @@ def is_arduino_connected():
     return arduino is not None and arduino.is_open
 
 
+# ========== Robot Control Functions (Arduino) ==========
+# يجب أن تكون معرفة قبل استخدامها في dispense_dose
+
+def start_robot():
+    """بدء تشغيل الروبوت (أمر START للأردوينو)."""
+    global arduino
+    if not connect_arduino(): 
+        return False
+    try:
+        arduino.write(b'START\n')
+        arduino.flush()
+        print("🤖 START -> Arduino")
+        return True
+    except Exception as e:
+        disconnect_arduino()
+        return False
+
+def stop_robot():
+    """إيقاف الروبوت (أمر STOP للأردوينو)."""
+    global arduino
+    # تحسين: عدم محاولة الاتصال إذا كان متصلاً بالفعل (لتخفيف الضغط)
+    if not is_arduino_connected():
+        if not connect_arduino(): 
+             return False
+             
+    try:
+        # إرسال أمر STOP مرة واحدة مع flush نظيف لتجنب مسح الردود المهمة
+        arduino.write(b'STOP\n')
+        arduino.flush()
+        time.sleep(0.05)
+        print("🛑 STOP -> Arduino")
+        return True
+    except Exception as e:
+        disconnect_arduino()
+        return False
+
+def return_home():
+    """إرجاع الروبوت (أمر RETURN للأردوينو)."""
+    global arduino
+    if not connect_arduino(): 
+        return False
+    try:
+        arduino.write(b'RETURN\n')
+        arduino.flush()
+        print("🏠 RETURN -> Arduino")
+        return True
+    except Exception as e: 
+        return False
+
+def get_robot_status():
+    """قراءة حالة الروبوت من الأردوينو."""
+    if not is_arduino_connected(): 
+        return None
+    try:
+        if arduino.in_waiting > 0:
+            return arduino.readline().decode().strip()
+    except: 
+        pass
+    return None
+
+
+
 # ========== GPIO Functions ==========
 
 def setup_gpio():
@@ -163,44 +253,66 @@ def set_servo_angle(pwm, angle):
     pwm.ChangeDutyCycle(duty)
 
 def smooth_move(pwm, start_angle, end_angle, steps=50):
-    """حركة خطية دقيقة بدون easing (للوصول الدقيق للزاوية المستهدفة).
+    """حركة خطية دقيقة آمنة للسيرفو.
     
     Args:
         pwm: كائن PWM
         start_angle: الزاوية البدء
         end_angle: الزاوية النهائية
         steps: عدد الخطوات (افتراضي 50 للدقة والنعومة)
-    
-    IMPORTANT: يقوم بتطبيع الزوايا لمنع اللفات الزائدة
     """
     if pwm is None or not hasattr(pwm, 'ChangeDutyCycle'):
         print(f"[SIMULATION] Servo: {start_angle}° -> {end_angle}°")
         time.sleep(abs(end_angle - start_angle) * SERVO_DELAY)
         return
     
-    # 🛡️ تطبيع الزوايا لتكون بين 0-180 (حماية من اللفات الزائدة)
+    # 🛡️ حماية: القسمة على الصفر
+    if steps <= 0:
+        set_servo_angle(pwm, end_angle)
+        return
+
+    # 🛡️ تطبيع الزوايا لتكون بين 0-180
     start_angle = max(0, min(180, start_angle))
     end_angle = max(0, min(180, end_angle))
     
     distance = abs(end_angle - start_angle)
     
-    print(f"   🔄 smooth_move: {start_angle:.1f}° → {end_angle:.1f}° ({distance:.1f}° فرق، {steps} خطوة)")
+    print(f"   🔄 smooth_move: {start_angle:.1f}° → {end_angle:.1f}° ({distance:.1f}° فرق)")
 
-    # حركة خطية بسيطة (بدون easing) للدقة العالية
+    # ⚡ تحسين: منع الحركة المجهرية غير الضرورية
+    if distance < 1.0:
+        set_servo_angle(pwm, end_angle)
+        return
+
+    # ⚡ حماية: فرض فترة راحة للسيرفو
+    global _last_servo_move
+    elapsed = time.time() - _last_servo_move
+    if elapsed < MIN_MOVE_INTERVAL:
+        time.sleep(MIN_MOVE_INTERVAL - elapsed)
+
+    # 🛡️ حماية: Timeout لمنع العليق في الحلقة
+    max_duration = 5.0  # 5 ثواني كحد أقصى للحركة
+    start_time = time.time()
+
     for i in range(steps + 1):
-        t = i / steps  # حركة خطية: 0.0 -> 1.0
+        if (time.time() - start_time) > max_duration:
+            print("⚠️ Servo Move Timeout - Breaking Loop")
+            break
+            
+        t = i / steps
         current_angle = start_angle + (end_angle - start_angle) * t
         set_servo_angle(pwm, current_angle)
         time.sleep(SERVO_DELAY)
         
-    # تأكيد الزاوية النهائية مرتين للدقة
+    # تأكيد الزاوية النهائية
     set_servo_angle(pwm, end_angle)
-    time.sleep(0.3)  # انتظار أطول للاستقرار
-    set_servo_angle(pwm, end_angle)  # تأكيد ثاني
-    time.sleep(0.4)  # وقت كافي للوصول التام + التغلب على المقاومة
+    time.sleep(0.4) # انتظار أطول (0.4s) لمنع الارتداد (Drift)
     
-    # إيقاف PWM لمنع الاهتزاز والحرارة
+    # إيقاف PWM *بعد* استقرار تام
     pwm.ChangeDutyCycle(0)
+    
+    # تحديث وقت آخر حركة
+    _last_servo_move = time.time()
 
 def move_servo(pwm, target_angle):
     """تحريك السيرفو لزاوية معينة."""
@@ -226,221 +338,112 @@ def move_servo(pwm, target_angle):
 
 # ========== 🔧 MEDICINE DISPENSING (GPIO DIRECT CONTROL) ==========
 
+# ========== 🔧 MEDICINE DISPENSING (GPIO DIRECT CONTROL) ==========
+
 def dispense_dose(box_id):
     """
     صرف جرعة من صندوق الدواء عبر GPIO مباشرة.
     محمي بقفل الأجهزة (_hw_lock) لمنع التعارض.
-    
-    التسلسل الكامل:
-    1. Pre-Dispense Check (التحقق قبل الصرف)
-    2. تدوير الكاروسيل لزاوية الصندوق
-    3. تأكيد موضع الكاروسيل
-    4. فتح البوابة بحركة سلسة
-    5. الانتظار لسقوط الدواء
-    6. إغلاق البوابة
-    7. تسجيل العملية
-    8. إيقاف PWM
     """
     global current_carousel_angle
     
-    # === الحصول على قفل الأجهزة ===
-    acquired = _hw_lock.acquire(timeout=10)
-    if not acquired:
+    # === قياس الأداء ===
+    start_time = time.time()
+    
+    # استخدام Context Manager للقفل (أكثر أماناً وأنظف)
+    # ملاحظة: acquire لا يدعم الـ context manager مع timeout مباشرة في Python القديم
+    # لكن سنستخدم الطريقة الآمنة التقليدية مع تحسين
+    if not _hw_lock.acquire(timeout=10):
         print(f"❌ فشل الحصول على قفل الأجهزة (timeout) - الصندوق {box_id}")
         return False, f"النظام مشغول - لا يمكن صرف الصندوق {box_id}"
-    
+
+    # تهيئة متغيرات الطوارئ قبل أي شيء (لمنع crash في الـ except)
+    gate_pwm = None
+    close_angle = 0
+
     try:
-<<<<<<< HEAD
-=======
-        # 🛡️ حماية: إيقاف محركات الروبوت قبل تحريك الكاروسيل
-        # لمنع التداخل الكهربائي بين PWM الكاروسيل و Arduino
-        try:
-            stop_robot()
-            time.sleep(0.2)  # انتظار أطول للتأكد التام من إيقاف المحركات
-            print("   🛡️ تم إيقاف محركات الروبوت قبل تحريك الكاروسيل (حماية من التداخل)")
-        except Exception as safety_err:
-            print(f"   ⚠️ تحذير: {safety_err}")
-        
-        # ======== 2. تدوير الكاروسيل ========
-        print(f"\n🔄 الخطوة 2: تدوير الكاروسيل")
-        
-        # 🛡️ تطبيع الزوايا قبل الحركة
-        current_carousel_angle = max(0, min(180, current_carousel_angle))
-        carousel_angle = max(0, min(180, carousel_angle))
-        
-        if pwm_carousel and current_carousel_angle != carousel_angle:
-            print(f"   تدوير: {current_carousel_angle}° → {carousel_angle}°")
-            smooth_move(pwm_carousel, current_carousel_angle, carousel_angle, steps=60)
-            time.sleep(0.3)  # تثبيت
-            current_carousel_angle = carousel_angle
-            # 🛡️ إيقاف الروبوت مرة أخرى بعد حركة الكاروسيل (منع استمرار الحركة)
-            try:
-                stop_robot()
-                time.sleep(0.1)
-                print("   🛡️ تأكيد إيقاف محركات الروبوت بعد حركة الكاروسيل")
-            except: pass
-        else:
-            print(f"   ✓ الكاروسيل في الموضع ({carousel_angle}°)")
-        
-        # ======== 3. تأكيد موضع الكاروسيل ========
-        print(f"\n✓ الخطوة 3: تأكيد الموضع")
-        # استخدام tolerance ±2° لأن السيرفو ميكانيكي
-        if abs(current_carousel_angle - carousel_angle) <= 2:
-            print(f"   ✓ تأكيد: الكاروسيل في الزاوية {carousel_angle}° (فرق: {abs(current_carousel_angle - carousel_angle):.1f}°)")
-        else:
-            print(f"   ❌ خطأ: الكاروسيل في {current_carousel_angle}° بدلاً من {carousel_angle}° (فرق: {abs(current_carousel_angle - carousel_angle):.1f}°)")
-            return False, f"فشل تأكيد موضع الكاروسيل"
-        
-        # ======== 4. فتح البوابة ========
-        print(f"\n↗️ الخطوة 4: فتح البوابة")
-        print(f"   من {close_angle}° → {open_angle}°")
-        smooth_move(gate_pwm, close_angle, open_angle, steps=25)
-        print(f"   ✓ البوابة مفتوحة")
-        
-        # ======== 5. انتظار سقوط الدواء ========
-        print(f"\n⏳ الخطوة 5: انتظار سقوط الدواء ({DISPENSE_HOLD_TIME}s)")
-        time.sleep(DISPENSE_HOLD_TIME)
-        print(f"   ✓ الانتظار انتهى")
-        
-        # ======== 6. إغلاق البوابة ========
-        print(f"\n↙️ الخطوة 6: إغلاق البوابة")
-        print(f"   من {open_angle}° → {close_angle}°")
-        smooth_move(gate_pwm, open_angle, close_angle, steps=25)
-        print(f"   ✓ البوابة مغلقة")
-        
-        # ======== 7. تسجيل العملية ========
-        print(f"\n📝 الخطوة 7: تسجيل العملية")
-        try:
-            from database import log_dose
-            log_dose(box_id, 'dispensed', 'success', f'صرف جرعة - الصندوق {box_id}')
-            print(f"   ✓ تم التسجيل في قاعدة البيانات")
-        except Exception as log_err:
-            print(f"   ⚠️ فشل التسجيل: {log_err}")
-        
-        # ======== 8. إيقاف PWM ========
-        print(f"\n🔧 الخطوة 8: إيقاف PWM")
-        gate_pwm.ChangeDutyCycle(0)
-        print(f"   ✓ PWM متوقف")
-        
->>>>>>> 7bb6203313304bb920a8e7a4bc132c55be3998bf
         print(f"\n{'─'*40}")
         print(f"📦 بدء عملية صرف الدواء - الصندوق {box_id}")
         print(f"{'─'*40}")
         
-        # ======== 1. Pre-Dispense Check ========
-        print(f"\n🔍 الخطوة 1: التحقق قبل الصرف")
-        
-        # 1.1 التحقق من صحة معرف الصندوق
+        # 1. Pre-Dispense Check
         if box_id not in BOX_CONFIG:
-            print(f"   ❌ خطأ: الصندوق {box_id} غير موجود")
-            return False, f"صندوق {box_id} غير موجود في BOX_CONFIG"
+            return False, f"صندوق {box_id} غير موجود"
         
         config = BOX_CONFIG[box_id]
         open_angle = config['open_angle']
         close_angle = config['close_angle']
         carousel_angle = BOX_ANGLES.get(box_id, 0)
-        
-        # 1.2 الحصول على كائنات PWM
         gate_pwm = gate_pwms.get(box_id)
         
-        # 1.3 التحقق من جاهزية GPIO
+        # التأكد من الجاهزية
         if HAS_GPIO and (gate_pwm is None or pwm_carousel is None):
-            print(f"   ⚠️ GPIO not ready, re-initializing...")
             setup_gpio()
             gate_pwm = gate_pwms.get(box_id)
-        
+            
         if not HAS_GPIO:
-            print(f"   ⚠️ وضع المحاكاة (GPIO غير متاح)")
-            return True, f"تم صرف جرعة من الصندوق {box_id} (محاكاة)"
-        
-        if gate_pwm is None:
-            print(f"   ❌ خطأ: gate_pwm للصندوق {box_id} غير مهيأ بعد إعادة المحاولة")
-            return False, f"بوابة الصندوق {box_id} غير مهيأة"
-        
-        print(f"   ✓ الصندوق {box_id} جاهز للصرف (Thread Safe)")
-        print(f"   ✓ زوايا: carousel={carousel_angle}°, gate={close_angle}°→{open_angle}°")
-        
+             return True, f"تم صرف جرعة من الصندوق {box_id} (محاكاة)"
+             
+        # 🛡️ حماية: إيقاف الروبوت قبل تحريك الكاروسيل
         try:
-            # ======== 2. تدوير الكاروسيل ========
-            print(f"\n🔄 الخطوة 2: تدوير الكاروسيل")
-            
-            if pwm_carousel and current_carousel_angle != carousel_angle:
-                print(f"   تدوير: {current_carousel_angle}° → {carousel_angle}°")
-                smooth_move(pwm_carousel, current_carousel_angle, carousel_angle, steps=40)
-                time.sleep(0.3)  # تثبيت
-                current_carousel_angle = carousel_angle
-            else:
-                print(f"   ✓ الكاروسيل في الموضع ({carousel_angle}°)")
-            
-            # ======== 3. تأكيد موضع الكاروسيل ========
-            print(f"\n✓ الخطوة 3: تأكيد الموضع")
-            if current_carousel_angle == carousel_angle:
-                print(f"   ✓ تأكيد: الكاروسيل في الزاوية {carousel_angle}°")
-            else:
-                print(f"   ❌ خطأ: الكاروسيل في {current_carousel_angle}° بدلاً من {carousel_angle}°")
-                return False, f"فشل تأكيد موضع الكاروسيل"
-            
-            # ======== 4. فتح البوابة ========
-            print(f"\n↗️ الخطوة 4: فتح البوابة")
-            print(f"   من {close_angle}° → {open_angle}°")
-            smooth_move(gate_pwm, close_angle, open_angle, steps=25)
-            print(f"   ✓ البوابة مفتوحة")
-            
-            # ======== 5. انتظار سقوط الدواء ========
-            print(f"\n⏳ الخطوة 5: انتظار سقوط الدواء ({DISPENSE_HOLD_TIME}s)")
-            time.sleep(DISPENSE_HOLD_TIME)
-            print(f"   ✓ الانتظار انتهى")
-            
-            # ======== 6. إغلاق البوابة ========
-            print(f"\n↙️ الخطوة 6: إغلاق البوابة")
-            print(f"   من {open_angle}° → {close_angle}°")
-            smooth_move(gate_pwm, open_angle, close_angle, steps=25)
-            print(f"   ✓ البوابة مغلقة")
-            
-            # ======== 7. تسجيل العملية ========
-            print(f"\n📝 الخطوة 7: تسجيل العملية")
-            try:
-                from database import log_dose
-                log_dose(box_id, 'dispensed', 'success', f'صرف جرعة - الصندوق {box_id}')
-                print(f"   ✓ تم التسجيل في قاعدة البيانات")
-            except Exception as log_err:
-                print(f"   ⚠️ فشل التسجيل: {log_err}")
-            
-            # ======== 8. إيقاف PWM ========
-            print(f"\n🔧 الخطوة 8: إيقاف PWM")
-            gate_pwm.ChangeDutyCycle(0)
-            print(f"   ✓ PWM متوقف")
-            
-            print(f"\n{'─'*40}")
-            print(f"✅ تم صرف الجرعة بنجاح من الصندوق {box_id}")
-            print(f"{'─'*40}")
-            
-            return True, f"تم صرف جرعة من الصندوق {box_id}"
-            
-        except Exception as e:
-            print(f"\n❌ خطأ أثناء الصرف: {e}")
-            # محاولة إغلاق البوابة للسلامة
-            try:
-                if gate_pwm:
-                    print(f"   🔧 محاولة إغلاق البوابة للسلامة...")
-                    set_servo_angle(gate_pwm, close_angle)
-                    time.sleep(0.5)
-                    gate_pwm.ChangeDutyCycle(0)
-                    print(f"   ✓ تم إغلاق البوابة")
-            except:
-                pass
-            
-            # تسجيل الفشل
-            try:
-                from database import log_dose
-                log_dose(box_id, 'dispensed', 'failed', f'فشل الصرف: {e}')
-            except:
-                pass
-            
-            return False, f"خطأ في صرف الصندوق {box_id}: {e}"
-    
+            stop_robot()
+            time.sleep(0.2)
+        except: pass
+        
+        # 2. تدوير الكاروسيل
+        print(f"\n🔄 الخطوة 2: تدوير الكاروسيل إلى {carousel_angle}°")
+        current_carousel_angle = max(0, min(180, current_carousel_angle)) # Normalize
+        
+        # التحرك للزاوية الدقيقة
+        smooth_move(pwm_carousel, current_carousel_angle, carousel_angle, steps=40)
+        time.sleep(0.3)
+        current_carousel_angle = carousel_angle
+        
+        # إيقاف الروبوت مرة أخرى للتأكيد
+        try:
+            stop_robot()
+        except: pass
+
+        # 3. تأكيد الموضع (Tolerance Check)
+        if abs(current_carousel_angle - carousel_angle) <= 2:
+             print(f"   ✓ تموضع صحيح للكاروسيل")
+        else:
+             return False, f"فشل تموضع الكاروسيل (الزاوية {current_carousel_angle})"
+
+        # 4. فتح البوابة
+        print(f"\n↗️ الخطوة 4: فتح البوابة")
+        smooth_move(gate_pwm, close_angle, open_angle, steps=30)
+        
+        # 5. الانتظار
+        print(f"⏳ انتظار سقوط الدواء ({DISPENSE_HOLD_TIME}s)")
+        time.sleep(DISPENSE_HOLD_TIME)
+        
+        # 6. إغلاق البوابة
+        print(f"↙️ الخطوة 6: إغلاق البوابة")
+        smooth_move(gate_pwm, open_angle, close_angle, steps=30)
+        
+        # 7. التسجيل
+        try:
+            from database import log_dose
+            log_dose(box_id, 'dispensed', 'success', f'صرف جرعة - الصندوق {box_id}')
+        except: pass
+
+        print(f"✅ تم صرف الجرعة بنجاح (المدة: {time.time() - start_time:.2f}s)")
+        return True, f"تم صرف جرعة من الصندوق {box_id}"
+
+    except Exception as e:
+        duration = time.time() - start_time
+        print(f"\n❌ خطأ أثناء الصرف (بعد {duration:.2f}s): {e}")
+        # محاولة إغلاق البوابة للطوارئ
+        try:
+            if gate_pwm:
+                set_servo_angle(gate_pwm, close_angle)
+                time.sleep(0.5)
+                gate_pwm.ChangeDutyCycle(0)
+        except: pass
+        return False, f"خطأ: {e}"
+        
     finally:
-        # دائماً أطلق القفل
         _hw_lock.release()
 
 
@@ -481,8 +484,8 @@ def verify_face_with_timeout(timeout_seconds=15):
             score = face_data.get("score", 0)
             face_time = face_data.get("time", 0)
             
-            # التحقق أن الوجه تم رصده حديثاً (خلال آخر 5 ثواني)
-            if name != "Unknown" and (time.time() - face_time) < 5:
+            # التحقق أن الوجه تم رصده حديثاً
+            if name != "Unknown" and (time.time() - face_time) < FACE_FRESH_TIMEOUT:
                 print(f"   ✅ تم التعرف على: {name} (ثقة: {score:.2f})")
                 return True
         
@@ -498,7 +501,6 @@ def full_dispense_sequence(box_id):
     تسلسل الصرف الكامل (Workflow عالي المستوى).
     يستدعي dispense_dose() بدلاً من إعادة تنفيذ المنطق.
     
-<<<<<<< HEAD
     الخطوات:
     1. التحقق من الوجه (15 ثانية)
     2. تشغيل صوت النجاح
@@ -508,20 +510,6 @@ def full_dispense_sequence(box_id):
     ملاحظة:
     - الخطوة 5 (انتظار الزر) تتم عبر واجهة المستخدم
     - الخطوة 6 (الرجوع للخلف) تتم عبر API /return_home
-=======
-    الخطوات المعدلة:
-    1. التحقق من الوجه (15 ثانية).
-    2. تشغيل صوت النجاح.
-    3. الصرف: 
-       - تدوير كاروسيل -> انتظار 0.25s
-       - فتح بوابة -> انتظار 3s
-       - غلق بوابة
-    
-    ملاحظة:
-    - الكاروسيل يبقى في موضعه بعد الصرف
-    - العودة للصفر تتم فقط عند ضغط المريض على زر "تم أخذ الدواء"
-    - الرجوع للخلف يتم عبر API /return_home عند ضغط الزر
->>>>>>> 7bb6203313304bb920a8e7a4bc132c55be3998bf
     """
     global current_carousel_angle
     
@@ -569,7 +557,6 @@ def full_dispense_sequence(box_id):
     
     print(f"   ✓ {message}")
 
-<<<<<<< HEAD
     # ======== 4. العودة للصفر ========
     print(f"\n📍 الخطوة 4: العودة للصفر")
     _return_carousel_zero()
@@ -578,59 +565,6 @@ def full_dispense_sequence(box_id):
     time.sleep(1)
 
     print(f"\n✅ انتهى الصرف. في انتظار ضغط المريض للعودة.")
-=======
-    config = BOX_CONFIG[box_id]
-    gate_pwm = gate_pwms.get(box_id)
-    carousel_angle = BOX_ANGLES.get(box_id, 0)
-    
-    # 🛡️ حماية: إيقاف محركات الروبوت قبل تحريك الكاروسيل
-    # لمنع التداخل الكهربائي بين PWM الكاروسيل و Arduino
-    try:
-        stop_robot()
-        time.sleep(0.2)  # انتظار أطول للتأكد التام من إيقاف المحركات
-        print("   🛡️ تم إيقاف محركات الروبوت قبل تحريك الكاروسيل (حماية من التداخل)")
-    except Exception as safety_err:
-        print(f"   ⚠️ تحذير: {safety_err}")
-    
-    # أ) تدوير الكاروسيل
-    if HAS_GPIO and pwm_carousel:
-        # 🛡️ تطبيع الزوايا لمنع اللفات الزائدة
-        current_carousel_angle = max(0, min(180, current_carousel_angle))
-        carousel_angle = max(0, min(180, carousel_angle))
-        
-        print(f"   🔍 الزاوية الحالية قبل التدوير: {current_carousel_angle}°")
-        print(f"   🎯 الزاوية المستهدفة: {carousel_angle}°")
-        smooth_move(pwm_carousel, current_carousel_angle, carousel_angle, steps=60)
-        current_carousel_angle = carousel_angle
-        print(f"   ✓ تم تدوير الكاروسيل إلى {carousel_angle}°")
-        print(f"   ✓ current_carousel_angle محدّث إلى: {current_carousel_angle}°")
-        # 🛡️ إيقاف الروبوت بعد حركة الكاروسيل (منع التداخل)
-        try:
-            stop_robot()
-            time.sleep(0.1)
-            print("   🛡️ تأكيد إيقاف محركات الروبوت بعد حركة الكاروسيل")
-        except: pass
-    
-    # ب) انتظار ربع ثانية
-    time.sleep(0.25)
-    
-    # ج) فتح البوابة
-    if HAS_GPIO and gate_pwm:
-        smooth_move(gate_pwm, config['close_angle'], config['open_angle'], steps=20)
-        print(f"   ✓ تم فتح البوابة")
-    
-    # د) انتظار 3 ثواني (سقوط الدواء)
-    print(f"   ⏳ انتظار سقوط الدواء (3s)...")
-    time.sleep(3)
-    
-    # هـ) إغلاق البوابة
-    if HAS_GPIO and gate_pwm:
-        smooth_move(gate_pwm, config['open_angle'], config['close_angle'], steps=20)
-        gate_pwm.ChangeDutyCycle(0) # إيقاف PWM
-        print(f"   ✓ تم إغلاق البوابة")
-
-    print(f"\n✅ انتهى الصرف. الكاروسيل في الموضع {current_carousel_angle}° - في انتظار ضغط المريض للعودة.")
->>>>>>> 7bb6203313304bb920a8e7a4bc132c55be3998bf
     return True, "تم الصرف بنجاح - في انتظار المريض"
 
 
@@ -726,64 +660,7 @@ def go_home_zero():
         print(f"[SIMULATION] Zero position: {ZERO_ANGLE}°")
 
 
-# ========== Robot Control Functions (Arduino) ==========
 
-def start_robot():
-    """بدء تشغيل الروبوت (أمر START للأردوينو)."""
-    global arduino
-    if not connect_arduino(): 
-        return False
-    try:
-        arduino.write(b'START\n')
-        arduino.flush()
-        print("🤖 START -> Arduino")
-        return True
-    except Exception as e:
-        disconnect_arduino()
-        return False
-
-def stop_robot():
-    """إيقاف الروبوت (أمر STOP للأردوينو)."""
-    global arduino
-    if not connect_arduino(): 
-        return False
-    try:
-        # إرسال أمر STOP عدة مرات للتأكد + تنظيف المخزن المؤقت
-        arduino.reset_input_buffer()  # مسح أي بيانات قديمة
-        arduino.write(b'STOP\n')
-        arduino.flush()
-        time.sleep(0.05)  # انتظار قصير
-        arduino.write(b'STOP\n')  # إرسال مرة ثانية للتأكد
-        arduino.flush()
-        print("🛑 STOP -> Arduino (x2 + buffer clear)")
-        return True
-    except Exception as e:
-        disconnect_arduino()
-        return False
-
-def return_home():
-    """إرجاع الروبوت (أمر RETURN للأردوينو)."""
-    global arduino
-    if not connect_arduino(): 
-        return False
-    try:
-        arduino.write(b'RETURN\n')
-        arduino.flush()
-        print("🏠 RETURN -> Arduino")
-        return True
-    except Exception as e: 
-        return False
-
-def get_robot_status():
-    """قراءة حالة الروبوت من الأردوينو."""
-    if not is_arduino_connected(): 
-        return None
-    try:
-        if arduino.in_waiting > 0:
-            return arduino.readline().decode().strip()
-    except: 
-        pass
-    return None
 
 
 # ========== RAW CONTROL for TEST PAGE ==========
@@ -817,9 +694,14 @@ def poll_arduino_lines(max_lines=20):
     global _last_distance_cm
     if not connect_arduino(): 
         return
+    start_time = time.time()
     try:
         lines_read = 0
         while arduino.in_waiting > 0 and lines_read < max_lines:
+            # 🛡️ حماية: Timeout للخروج من الحلقة إذا استغرقت وقت طويل
+            if (time.time() - start_time) > 0.2:
+                break
+                
             line = arduino.readline().decode(errors="ignore").strip()
             lines_read += 1
             if line.startswith("DISTANCE:"):

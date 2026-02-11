@@ -3,7 +3,7 @@ import numpy as np
 import os
 
 class FaceEngine:
-    def __init__(self, det_size=(640, 640)):
+    def __init__(self, det_size=(320, 320)):
         # Initialize FaceAnalysis (retinaface + arcface)
         # providers=['CPUExecutionProvider'] is safer for Pi unless onnxruntime-gpu is installed
         # ⚡ PERFORMANCE: Using buffalo_s instead of buffalo_l for Raspberry Pi

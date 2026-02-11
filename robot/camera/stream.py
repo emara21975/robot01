@@ -119,17 +119,17 @@ def gen_frames():
             if engine and (current_time - last_rec_time > 1.0):
                 last_rec_time = current_time
                 
-                # ⚡ PERFORMANCE: Resize for faster detection
-                small_frame = cv2.resize(frame, (320, 240)) # Even smaller for detection speed
+                # ⚡ PERFORMANCE: Resize for faster detection (160x120 is enough for detection)
+                small_frame = cv2.resize(frame, (160, 120)) # Smallest possible for detection
                 faces = engine.detect(small_frame)
                 
                 # ⚡ PERFORMANCE: Only process single face to reduce CPU load
                 if len(faces) == 1:
                     face = faces[0]
                     
-                    # Bounding Box (scale back to original size 640/320 = 2)
-                    # NOTE: If we changed camera res to 640x480, and resize to 320x240, scale is 2.
-                    x1, y1, x2, y2 = [int(v * 2) for v in face.bbox]
+                    # Bounding Box (scale back to original size 640/160 = 4)
+                    # NOTE: If we changed camera res to 640x480, and resize to 160x120, scale is 4.
+                    x1, y1, x2, y2 = [int(v * 4) for v in face.bbox]
                     
 
                     # Recognition
@@ -179,8 +179,8 @@ def gen_frames():
             # In case of overlay error, print but still yield frame
             print(f"Overlay Error: {e}")
 
-        # ⚡ PERFORMANCE: Reduced JPEG quality (60) for faster encoding
-        ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+        # ⚡ PERFORMANCE: Reduced JPEG quality (55) for FASTER encoding over network
+        ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 55])
         if not ret:
             continue
             
