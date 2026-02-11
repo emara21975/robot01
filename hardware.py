@@ -522,6 +522,12 @@ def full_dispense_sequence(box_id):
     print(f"🚀 بدء تسلسل الصرف الكامل للصندوق {box_id}")
     print(f"{'='*50}")
     
+    # 🛡️ أمان: إيقاف الروبوت فوراً قبل أي شيء
+    try:
+        stop_robot()
+        time.sleep(0.1)
+    except: pass
+    
     # ======== 1. التحقق من الوجه ========
     face_verified = False
     try:

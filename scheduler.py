@@ -199,7 +199,6 @@ def check_and_dispense():
                 if last_time == current_date_key:
                     continue  # تم الصرف بالفعل
                 
-<<<<<<< HEAD
                 # فحص النظام قبل الصرف
                 if robot_state.is_busy():
                     print(f"⏳ النظام مشغول ({robot_state.current}) - تأجيل صرف الصندوق {box_id}")
@@ -210,14 +209,6 @@ def check_and_dispense():
                 if not op_id:
                     print(f"⚠️ فشل الحصول على قفل العملية - تخطي الصندوق {box_id}")
                     continue
-=======
-                # صرف الجرعة (بدون حركة روبوت - الحركة تمت في التنبيه المسبق)
-                print(f"⏰ [{now.strftime('%H:%M:%S')}] حان موعد الصندوق {box_id}!")
-                
-                # استخدام التسلسل الكامل (الصرف فقط - الروبوت وصل بالفعل عند -30 ثانية)
-                from hardware import full_dispense_sequence
-                success, message = full_dispense_sequence(box_id)
->>>>>>> 7bb6203313304bb920a8e7a4bc132c55be3998bf
                 
                 try:
                     # صرف الجرعة
