@@ -526,36 +526,15 @@ def go_home_return():
         except Exception as sound_err:
             print(f"⚠️ خطأ في تشغيل الصوت: {sound_err}")
         
-<<<<<<< HEAD
+        # ✅ تحقق: هل الروبوت تحرك للأمام؟
+        # نستخدم دالة من scheduler للتحقق
+        robot_status = get_robot_moved_status()
+        print(f"🔍 /return_home: robot_moved_status = {robot_status}")
+        
         # تغيير الحالة إلى RETURNING
         if robot_state.current in [RobotState.WAIT_CONFIRM, RobotState.IDLE,
                                     RobotState.DISPENSING]:
             robot_state.set(RobotState.RETURNING)
-        
-        if return_home():
-             # Start Safety Timer (30 seconds)
-             threading.Thread(target=monitor_movement, args=(30,), daemon=True).start()
-             
-             # إطلاق قفل العملية
-             robot_state.release_operation()
-             
-             # جدولة العودة لـ IDLE بعد 10 ثواني (وقت كافي للعودة)
-             def _finish_return():
-                 time.sleep(10)
-                 if robot_state.current == RobotState.RETURNING:
-                     robot_state.force_idle("return home completed")
-             threading.Thread(target=_finish_return, daemon=True).start()
-             
-             return jsonify({"status": "✓ شكراً لك! جاري الرجوع..."})
-        else:
-             robot_state.force_idle("return_home failed")
-             return jsonify({"status": "✗ فشل إرسال أمر الرجوع"}), 500
-    except Exception as e:
-        robot_state.force_idle(f"return_home error: {e}")
-=======
-        # ✅ تحقق: هل الروبوت تحرك للأمام؟
-        robot_status = get_robot_moved_status()
-        print(f"🔍 /return_home: robot_moved_status = {robot_status}")
         
         if robot_status:
             # الصرف التلقائي - الروبوت تحرك → يجب أن يرجع
@@ -563,19 +542,34 @@ def go_home_return():
             if return_home():
                  # Start Safety Timer (30 seconds)
                  threading.Thread(target=monitor_movement, args=(30,), daemon=True).start()
-                 reset_robot_moved_status()  # إعادة تعيين
+                 
+                 # إعادة تعيين الحالة
+                 reset_robot_moved_status()
                  print("✅ تم إعادة تعيين robot_moved_forward إلى False")
+                 
+                 # إطلاق قفل العملية
+                 robot_state.release_operation()
+                 
+                 # جدولة العودة لـ IDLE بعد 10 ثواني (وقت كافي للعودة)
+                 def _finish_return():
+                     time.sleep(10)
+                     if robot_state.current == RobotState.RETURNING:
+                         robot_state.force_idle("return home completed")
+                 threading.Thread(target=_finish_return, daemon=True).start()
+                 
                  return jsonify({"status": "✓ شكراً لك! جاري الرجوع..."})
             else:
+                 robot_state.force_idle("return_home failed")
                  return jsonify({"status": "✗ فشل إرسال أمر الرجوع"}), 500
         else:
             # صرف طوارئ - الروبوت لم يتحرك → لا يرجع
             print("🏠 الروبوت لم يتحرك (صرف طوارئ) - لا حاجة للرجوع")
+            robot_state.set(RobotState.IDLE)
             return jsonify({"status": "✓ شكراً لك! نتمنى لك الشفاء العاجل ❤️"})
             
     except Exception as e:
         reset_robot_moved_status()  # إعادة تعيين عند الخطأ
->>>>>>> 7bb6203313304bb920a8e7a4bc132c55be3998bf
+        robot_state.force_idle(f"return_home error: {e}")
         return jsonify({"status": f"✗ خطأ: {str(e)}"}), 500
 
 
@@ -688,17 +682,16 @@ if __name__ == "__main__":
     # تهيئة GPIO على Raspberry Pi
     setup_gpio() # Safe to call even if HAS_GPIO is False (handled internally)
     
-<<<<<<< HEAD
     # تأكيد اكتمال التهيئة
     robot_state.mark_initialized()
-=======
+    
     # ✅ العودة لوضع الصندوق 1 عند البدء (Home Position)
     try:
-        go_home_zero()
-        print("🏠 تم إرجاع الكاروسيل للصندوق 1 (وضع البداية)")
+        if HAS_GPIO:
+            go_home_zero()
+            print("🏠 تم إرجاع الكاروسيل للصندوق 1 (وضع البداية)")
     except Exception as home_err:
         print(f"⚠️ خطأ في تحديد الوضع الابتدائي: {home_err}")
->>>>>>> 7bb6203313304bb920a8e7a4bc132c55be3998bf
     
     # تشغيل نظام الجدولة التلقائية
     start_scheduler()
