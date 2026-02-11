@@ -282,6 +282,8 @@ def smooth_move(pwm, start_angle, end_angle, steps=50):
     # ⚡ تحسين: منع الحركة المجهرية غير الضرورية
     if distance < 1.0:
         set_servo_angle(pwm, end_angle)
+        time.sleep(0.2)
+        pwm.ChangeDutyCycle(0)
         return
 
     # ⚡ حماية: فرض فترة راحة للسيرفو
