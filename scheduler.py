@@ -17,6 +17,9 @@ last_dispensed = {1: None, 2: None}  # لمنع التكرار في نفس ال�
 pre_notified = {1: None, 2: None}    # لمنع تكرار التنبيه المسبق
 missed_notified = {1: None, 2: None} # لمنع تكرار تنبيه الفوات
 
+# تتبع حركة الروبوت (للتمييز بين الصرف التلقائي والطوارئ)
+robot_moved_forward = False
+
 # مسارات الأصوات
 VOICES_DIR = os.path.join(os.path.dirname(__file__), 'voices')
 SOUND_PRE_NOTIFY = os.path.join(VOICES_DIR, 'med_time01.mp3')   # قبل الموعد بـ 30 ثانية
@@ -38,7 +41,7 @@ def play_sound(sound_path):
     try:
         # محاولة استخدام pygame
         try:
-            import pygame
+            import pygame  # type: ignore
             if not pygame.mixer.get_init():
                 pygame.mixer.init()
             pygame.mixer.music.load(sound_path)
@@ -110,19 +113,28 @@ def check_and_dispense():
             if 55 <= time_diff <= 65:  # بين 55-65 ثانية
                 camera_started_key = f"camera_{current_date_key}"
                 if pre_notified.get(camera_started_key) != current_date_key:
-                    print(f"📷 [{now.strftime('%H:%M:%S')}] تشغيل الكاميرا (قبل دقيقة)")
-                    try:
-                        play_sound(SOUND_CAMERA)
-                        from robot.camera.camera import camera
-                        if camera and not camera.is_running():
-                            camera.start()
-                    except Exception as cam_err:
-                        print(f"⚠️ خطأ في تشغيل الكاميرا: {cam_err}")
+                    # ✅ التحقق: هل نظام الكاميرا مفعّل؟
+                    from database import get_setting
+                    auth_enabled = str(get_setting("auth_enabled", "0")).strip() == "1"
+                    
+                    if auth_enabled:
+                        print(f"📷 [{now.strftime('%H:%M:%S')}] تشغيل الكاميرا (قبل دقيقة) - النظام مفعّل")
+                        try:
+                            play_sound(SOUND_CAMERA)
+                            from robot.camera.camera import camera
+                            if camera and not camera.is_running():
+                                camera.start()
+                        except Exception as cam_err:
+                            print(f"⚠️ خطأ في تشغيل الكاميرا: {cam_err}")
+                    else:
+                        print(f"📷 [{now.strftime('%H:%M:%S')}] تخطي تشغيل الكاميرا - النظام معطّل")
+                    
                     pre_notified[camera_started_key] = current_date_key
             
-            # ====== 1. التنبيه المسبق والحركة (30 ثانية قبل الموعد) ======
+            # ====== 1. التنبيه المسبق والحركة الذكية (30 ثانية قبل الموعد) ======
             if 25 <= time_diff <= 35:  # بين 25-35 ثانية
                 if pre_notified.get(box_id) != current_date_key:
+<<<<<<< HEAD
                     # فحص النظام قبل الحركة
                     if robot_state.is_busy():
                         print(f"⏳ النظام مشغول - تخطي التنبيه المسبق")
@@ -135,19 +147,55 @@ def check_and_dispense():
                     robot_state.set(RobotState.MOVING)
                     
                     # تحريك الروبوت لمدة 3 ثواني
+=======
+                    print(f"🔔 [{now.strftime('%H:%M:%S')}] تنبيه وحركة ذكية (قبل 30 ثانية)")
+                    play_sound(SOUND_PRE_NOTIFY)
+                    
+                    # 🤖 الحركة الذكية للروبوت (مع كشف العقبات)
+>>>>>>> 7bb6203313304bb920a8e7a4bc132c55be3998bf
                     try:
-                        from hardware import start_robot, stop_robot
-                        print("   🤖 تحرك للأمام (3 ثواني)...")
+                        from hardware import start_robot, stop_robot, get_latest_distance
+                        global robot_moved_forward
+                        
+                        print("   🤖 بدء الحركة للأمام...")
                         if start_robot():
-                            time.sleep(3)
+                            # ✅ تعيين العلم: الروبوت تحرك للأمام
+                            robot_moved_forward = True
+                            print(f"   ✅ تم تعيين robot_moved_forward = True")
+                            
+                            # الحركة لمدة أقصاها 5 ثواني
+                            # لكن يتوقف فوراً لو اكتشف عقبة (سرير المريض)
+                            OBSTACLE_THRESHOLD = 20  # سم - المسافة الآمنة
+                            MAX_MOVE_TIME = 5  # ثواني
+                            
+                            for i in range(MAX_MOVE_TIME):
+                                time.sleep(1)
+                                distance = get_latest_distance()
+                                
+                                if distance is not None and distance < OBSTACLE_THRESHOLD:
+                                    print(f"   🛑 اكتشاف عقبة على بعد {distance:.1f} سم - توقف!")
+                                    print(f"   ✅ وصل الروبوت للسرير")
+                                    break
+                                elif distance is not None:
+                                    print(f"   📏 المسافة: {distance:.1f} سم - استمرار...")
+                            
                             stop_robot()
-                            print("   ✓ توقف الروبوت")
+                            print(f"   ✓ توقف الروبوت (جاهز للصرف)")
+                        else:
+                            print(f"   ❌ فشل start_robot() - الروبوت لم يتحرك")
+                            print(f"   ⚠️ robot_moved_forward يبقى = {robot_moved_forward}")
                     except Exception as move_err:
+<<<<<<< HEAD
                         print(f"⚠️ فشل الحركة: {move_err}")
                     
                     # العودة لـ IDLE بعد الحركة
                     robot_state.force_idle("pre-notify movement done")
 
+=======
+                        print(f"⚠️ خطأ في الحركة: {move_err}")
+                        print(f"   ⚠️ robot_moved_forward الحالي = {robot_moved_forward}")
+                    
+>>>>>>> 7bb6203313304bb920a8e7a4bc132c55be3998bf
                     pre_notified[box_id] = current_date_key
             
             # ====== 2. تحقق إذا حان الموعد (نفس الساعة والدقيقة) ======
@@ -158,6 +206,7 @@ def check_and_dispense():
                 if last_time == current_date_key:
                     continue  # تم الصرف بالفعل
                 
+<<<<<<< HEAD
                 # فحص النظام قبل الصرف
                 if robot_state.is_busy():
                     print(f"⏳ النظام مشغول ({robot_state.current}) - تأجيل صرف الصندوق {box_id}")
@@ -168,6 +217,14 @@ def check_and_dispense():
                 if not op_id:
                     print(f"⚠️ فشل الحصول على قفل العملية - تخطي الصندوق {box_id}")
                     continue
+=======
+                # صرف الجرعة (بدون حركة روبوت - الحركة تمت في التنبيه المسبق)
+                print(f"⏰ [{now.strftime('%H:%M:%S')}] حان موعد الصندوق {box_id}!")
+                
+                # استخدام التسلسل الكامل (الصرف فقط - الروبوت وصل بالفعل عند -30 ثانية)
+                from hardware import full_dispense_sequence
+                success, message = full_dispense_sequence(box_id)
+>>>>>>> 7bb6203313304bb920a8e7a4bc132c55be3998bf
                 
                 try:
                     # صرف الجرعة
@@ -204,10 +261,14 @@ def check_and_dispense():
                 
                 # ====== إيقاف الكاميرا بعد الصرف (لتوفير الموارد) ======
                 try:
-                    from robot.camera.camera import camera
-                    if camera and camera.is_running():
-                        print(f"📷 [{now.strftime('%H:%M:%S')}] إيقاف الكاميرا بعد الصرف")
-                        camera.stop()
+                    from database import get_setting
+                    auth_enabled = str(get_setting("auth_enabled", "0")).strip() == "1"
+                    
+                    if auth_enabled:
+                        from robot.camera.camera import camera
+                        if camera and camera.is_running():
+                            print(f"📷 [{now.strftime('%H:%M:%S')}] إيقاف الكاميرا بعد الصرف")
+                            camera.stop()
                 except Exception as cam_err:
                     print(f"⚠️ خطأ في إيقاف الكاميرا: {cam_err}")
             
@@ -273,3 +334,14 @@ def stop_scheduler():
 def is_scheduler_running():
     """التحقق من حالة الجدولة."""
     return scheduler_running
+
+
+def get_robot_moved_status():
+    """الحصول على حالة حركة الروبوت."""
+    return robot_moved_forward
+
+
+def reset_robot_moved_status():
+    """إعادة تعيين حالة حركة الروبوت."""
+    global robot_moved_forward
+    robot_moved_forward = False

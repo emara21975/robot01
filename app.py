@@ -24,7 +24,10 @@ from hardware import (
 )
 
 # استيراد نظام الجدولة
-from scheduler import start_scheduler, stop_scheduler, is_scheduler_running
+from scheduler import (
+    start_scheduler, stop_scheduler, is_scheduler_running,
+    get_robot_moved_status, reset_robot_moved_status
+)
 
 # استيراد آلة الحالة (State Machine)
 from robot.state_machine import robot_state, RobotState
@@ -64,11 +67,6 @@ def patient():
     """شاشة المريض."""
     return render_template("patient.html", boxes=range(1, BOX_COUNT + 1))
 
-
-@app.route("/test.html")
-def test_page():
-    """صفحة اختبار النظام."""
-    return render_template("test.html")
 
 @app.route("/statistics")
 def statistics():
@@ -376,6 +374,9 @@ def open_box():
         data = request.get_json(silent=True) or {}
         box = int(data.get("box", 0))
         
+        # 🚨 صرف طوارئ (يدوي) - الروبوت لم يتحرك
+        reset_robot_moved_status()
+        
         # 0. التحقق من تفعيل الكاميرا
         val = str(get_setting("auth_enabled", "0")).strip()
         auth_enabled = val == "1"
@@ -460,6 +461,21 @@ def open_box():
     
                 log_dose(box, 'dispensed', 'success', f"{auth_msg} - تم الصرف")
                 
+<<<<<<< HEAD
+=======
+                # الصوت سيعمل عند ضغط المريض على "تم أخذ الدواء"
+                
+                # ✅ العودة التلقائية لوضع الصندوق 1 (Home Position)
+                # مع انتظار إغلاق الباب أولاً (سلامة الميكانيكا)
+                try:
+                    print("⏳ انتظار 2 ثانية للتأكد من إغلاق الباب...")
+                    time.sleep(2)  # انتظار إغلاق الباب بالكامل
+                    go_home_zero()
+                    print("🏠 تم إرجاع الكاروسيل للصندوق 1 تلقائياً (بعد التأكد من الإغلاق)")
+                except Exception as home_err:
+                    print(f"⚠️ خطأ في العودة للصفر: {home_err}")
+                
+>>>>>>> 7bb6203313304bb920a8e7a4bc132c55be3998bf
                 response = {"status": f"✓ {message}"}
                 if warning_msg:
                     response["warning_message"] = warning_msg
@@ -490,7 +506,12 @@ def load_mode():
     """تدوير العلبة لوضع إدخال الدواء."""
     try:
         load_medicine()
-        return jsonify({"status": "✓ تم تدوير العلبة لوضع التحميل"})
+        
+        # ⏳ انتظار المستخدم لتعبئة الدواء
+        # ملاحظة: المستخدم يضغط زر آخر بعد التعبئة للعودة للصفر
+        # أو يمكن إضافة sleep طويل (مثلاً 10 ثواني)
+        
+        return jsonify({"status": "✓ تم تدوير العلبة لوضع التحميل - اضغط زر 'صندوق 1' للعودة بعد التعبئة"})
     except Exception as e:
         return jsonify({"status": f"✗ خطأ: {str(e)}"}), 500
 
@@ -518,6 +539,7 @@ def go_home_return():
         except Exception as sound_err:
             print(f"⚠️ خطأ في تشغيل الصوت: {sound_err}")
         
+<<<<<<< HEAD
         # تغيير الحالة إلى RETURNING
         if robot_state.current in [RobotState.WAIT_CONFIRM, RobotState.IDLE,
                                     RobotState.DISPENSING]:
@@ -543,6 +565,30 @@ def go_home_return():
              return jsonify({"status": "✗ فشل إرسال أمر الرجوع"}), 500
     except Exception as e:
         robot_state.force_idle(f"return_home error: {e}")
+=======
+        # ✅ تحقق: هل الروبوت تحرك للأمام؟
+        robot_status = get_robot_moved_status()
+        print(f"🔍 /return_home: robot_moved_status = {robot_status}")
+        
+        if robot_status:
+            # الصرف التلقائي - الروبوت تحرك → يجب أن يرجع
+            print("🔙 الروبوت سيرجع للخلف (صرف تلقائي)")
+            if return_home():
+                 # Start Safety Timer (30 seconds)
+                 threading.Thread(target=monitor_movement, args=(30,), daemon=True).start()
+                 reset_robot_moved_status()  # إعادة تعيين
+                 print("✅ تم إعادة تعيين robot_moved_forward إلى False")
+                 return jsonify({"status": "✓ شكراً لك! جاري الرجوع..."})
+            else:
+                 return jsonify({"status": "✗ فشل إرسال أمر الرجوع"}), 500
+        else:
+            # صرف طوارئ - الروبوت لم يتحرك → لا يرجع
+            print("🏠 الروبوت لم يتحرك (صرف طوارئ) - لا حاجة للرجوع")
+            return jsonify({"status": "✓ شكراً لك! نتمنى لك الشفاء العاجل ❤️"})
+            
+    except Exception as e:
+        reset_robot_moved_status()  # إعادة تعيين عند الخطأ
+>>>>>>> 7bb6203313304bb920a8e7a4bc132c55be3998bf
         return jsonify({"status": f"✗ خطأ: {str(e)}"}), 500
 
 
@@ -609,136 +655,6 @@ def hw_status():
     """Get hardware health status"""
     return jsonify(get_hardware_status())
 
-# ========== API التحكم اليدوي (لصفحة الاختبار) ==========
-
-@app.route("/api/test/move", methods=["POST"])
-def api_test_move():
-    """واجهة برمجية للتحكم اليدوي في الحركة (Raw)."""
-    data = request.get_json(silent=True) or {}
-    direction = (data.get("direction") or "").lower()
-
-    mapping = {
-        "forward": "START",
-        "stop": "STOP",
-        "left": "LEFT",
-        "right": "RIGHT",
-        "reverse": "REVERSE",  
-        "return": "RETURN",    
-    }
-
-    cmd = mapping.get(direction)
-    if not cmd:
-        return jsonify({"ok": False, "error": "invalid_direction"}), 400
-
-    # Timeout logic: default 10s if not stop
-    timeout = data.get("timeout", 10)
-    try: timeout = int(timeout)
-    except: timeout = 10
-    
-    if cmd == "STOP":
-        timeout = None
-
-    from hardware import move_raw
-    ok = move_raw(cmd, safety_timeout=timeout)
-    return jsonify({"ok": ok, "cmd": cmd, "timeout": timeout})
-
-@app.route("/api/test/servo", methods=["POST"])
-def api_test_servo():
-    """واجهة برمجية للتحكم المباشر في السيرفو."""
-    data = request.get_json(silent=True) or {}
-    target = (data.get("target") or "").lower()  # carousel|gate
-    sid = int(data.get("id", 0))
-    angle = int(data.get("angle", 0))
-
-    from hardware import set_servo_raw
-    ok, msg = set_servo_raw(target, sid, angle)
-    return jsonify({"ok": ok, "message": msg})
-
-@app.route("/api/test/status", methods=["GET"])
-def api_test_status():
-    """الحصول على المسافة المباشرة من الحساس."""
-    from hardware import get_latest_distance
-    dist = get_latest_distance()
-    return jsonify({"ok": True, "distance_cm": dist})
-
-
-# ========== صفحة اختبار السيرفو (بدون قيود) ==========
-
-@app.route("/servo_test")
-def servo_test_page():
-    """صفحة اختبار الهاردوير بدون قيود."""
-    return render_template("servo_test.html")
-
-
-@app.route("/api/servo_test/carousel", methods=["POST"])
-def api_servo_carousel():
-    """تدوير الصندوق مباشرة (بدون قيود)."""
-    data = request.get_json(silent=True) or {}
-    angle = int(data.get("angle", 30))
-    
-    if not connect_arduino():
-        return jsonify({"ok": False, "message": "Arduino غير متصل"}), 500
-    
-    try:
-        from hardware import arduino
-        cmd = f"CAROUSEL {angle}\n"
-        arduino.write(cmd.encode())
-        return jsonify({"ok": True, "message": f"تم تدوير الصندوق إلى {angle}°"})
-    except Exception as e:
-        return jsonify({"ok": False, "message": str(e)}), 500
-
-
-@app.route("/api/servo_test/gate", methods=["POST"])
-def api_servo_gate():
-    """فتح/غلق باب مباشرة (بدون قيود)."""
-    data = request.get_json(silent=True) or {}
-    gate = data.get("gate", "A").upper()
-    angle = int(data.get("angle", 0))
-    
-    if not connect_arduino():
-        return jsonify({"ok": False, "message": "Arduino غير متصل"}), 500
-    
-    try:
-        from hardware import arduino
-        cmd = f"GATE {gate} {angle}\n"
-        arduino.write(cmd.encode())
-        action = "فتح" if angle > 45 else "غلق"
-        return jsonify({"ok": True, "message": f"تم {action} باب {gate}"})
-    except Exception as e:
-        return jsonify({"ok": False, "message": str(e)}), 500
-
-
-@app.route("/api/servo_test/dispense", methods=["POST"])
-def api_servo_dispense():
-    """صرف من خانة (بدون قيود)."""
-    data = request.get_json(silent=True) or {}
-    slot = data.get("slot", "A").upper()
-    
-    if not connect_arduino():
-        return jsonify({"ok": False, "message": "Arduino غير متصل"}), 500
-    
-    try:
-        from hardware import arduino
-        cmd = f"DISPENSE {slot}\n"
-        arduino.write(cmd.encode())
-        return jsonify({"ok": True, "message": f"تم إرسال أمر الصرف للخانة {slot}"})
-    except Exception as e:
-        return jsonify({"ok": False, "message": str(e)}), 500
-
-
-@app.route("/api/servo_test/stop", methods=["POST"])
-def api_servo_stop():
-    """إيقاف طوارئ."""
-    if not connect_arduino():
-        return jsonify({"ok": False, "message": "Arduino غير متصل"}), 500
-    
-    try:
-        from hardware import arduino
-        arduino.write(b"STOP\n")
-        return jsonify({"ok": True, "message": "تم إرسال أمر الإيقاف"})
-    except Exception as e:
-        return jsonify({"ok": False, "message": str(e)}), 500
-
 # ========== API أدوات النظام ==========
 
 @app.route("/api/system/restart", methods=["POST"])
@@ -785,8 +701,17 @@ if __name__ == "__main__":
     # تهيئة GPIO على Raspberry Pi
     setup_gpio() # Safe to call even if HAS_GPIO is False (handled internally)
     
+<<<<<<< HEAD
     # تأكيد اكتمال التهيئة
     robot_state.mark_initialized()
+=======
+    # ✅ العودة لوضع الصندوق 1 عند البدء (Home Position)
+    try:
+        go_home_zero()
+        print("🏠 تم إرجاع الكاروسيل للصندوق 1 (وضع البداية)")
+    except Exception as home_err:
+        print(f"⚠️ خطأ في تحديد الوضع الابتدائي: {home_err}")
+>>>>>>> 7bb6203313304bb920a8e7a4bc132c55be3998bf
     
     # تشغيل نظام الجدولة التلقائية
     start_scheduler()
