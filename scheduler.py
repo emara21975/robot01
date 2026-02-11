@@ -176,19 +176,18 @@ def check_and_dispense():
                             print(f"   ✓ توقف الروبوت (جاهز للصرف)")
                         else:
                             print(f"   ❌ فشل start_robot() - الروبوت لم يتحرك")
-                            print(f"   ⚠️ robot_moved_forward يبقى = {robot_moved_forward}")
+                            
                     except Exception as move_err:
-<<<<<<< HEAD
-                        print(f"⚠️ فشل الحركة: {move_err}")
-                    
-                    # العودة لـ IDLE بعد الحركة
-                    robot_state.force_idle("pre-notify movement done")
-
-=======
                         print(f"⚠️ خطأ في الحركة: {move_err}")
-                        print(f"   ⚠️ robot_moved_forward الحالي = {robot_moved_forward}")
+                        if 'robot_moved_forward' in globals():
+                             print(f"   ⚠️ robot_moved_forward الحالي = {robot_moved_forward}")
                     
->>>>>>> 7bb6203313304bb920a8e7a4bc132c55be3998bf
+                    # العودة لـ IDLE بعد الحركة (في حال الفشل أو الانتهاء)
+                    # لكن هنا الحالة MOVING فقط للـ pre-notification
+                    # سيتم التحديث لاحقاً عند الصرف
+                    if robot_state.current == RobotState.MOVING:
+                        robot_state.force_idle("pre-notify movement done")
+
                     pre_notified[box_id] = current_date_key
             
             # ====== 2. تحقق إذا حان الموعد (نفس الساعة والدقيقة) ======
